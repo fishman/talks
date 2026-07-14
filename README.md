@@ -1,6 +1,12 @@
 # talks-slide-decks
 
-Talk slide decks built with [slidr](../slidr).
+Talk slide decks built with [slidr](https://github.com/dynamia-ai/slidr).
+
+## Setup
+
+
+
+Slidr must be cloned alongside as `../slidr`.
 
 ## Build
 

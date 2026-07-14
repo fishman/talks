@@ -1,0 +1,11 @@
+[project]
+name = "talks-slide-decks"
+version = "0.1.0"
+description = "Talk slide decks built with slidr"
+
+[tool.pdm]
+# Build slides: pdm run slidr <deck>.md
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

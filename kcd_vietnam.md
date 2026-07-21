@@ -16,6 +16,14 @@ paginate: true
 
 ---
 
+## What You'll Learn
+
+- **GPU Sharing Mechanics:** How DRA and HAMi interact with the Kubernetes scheduler, and where the abstraction breaks down
+- **Production Blueprint:** Viettel Cloud's deployment of AI Notebooks with fractional GPUs, including isolation techniques and real utilization numbers
+- **Problem → Solution → Implementation:** The full pipeline from identifying GPU underutilization to deploying a production vGPU platform at telco scale
+
+---
+
 # Part 1: The Problem
 
 @subtitle GPU underutilization, atomic allocation, multi-tenant contention
@@ -33,9 +41,58 @@ Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low ut
 
 ---
 
+## What is HAMi
+
+![Before HAMi](assets/hami_intro/before-hami.png)
+
+---
+
+## What is HAMi
+
+![After HAMi](assets/hami_intro/after-hami.png)
+
+---
+
 # Part 2: The Solution
 
 @subtitle How DRA + HAMi implement fractional GPU allocation and scheduling
+
+---
+
+## HAMi Capabilities
+
+::: grid {cols=2}
+::: card
+### {icon:layers cls=accent-primary} Heterogeneous Management
+
+Manage and schedule GPU, NPU, MLU, and other accelerators in one workflow.
+:::
+::: card
+### {icon:shield-check cls=accent-primary} Hard Isolation
+
+Slice memory and compute precisely with hard isolation at runtime.
+:::
+::: card
+### {icon:git-branch cls=accent-contrast} Advanced Scheduling
+
+Use binpack, spread, and topology-aware policies for better placement.
+:::
+::: card
+### {icon:box cls=accent-primary} Kubernetes Native
+
+Work with Kubernetes APIs, DRA, and CDI for easier adoption.
+:::
+::: card
+### {icon:gauge cls=accent-primary} Resource Isolation & QoS
+
+Control memory and core quotas for fairer and more stable sharing.
+:::
+::: card
+### {icon:chart-bar cls=accent-contrast} Unified Monitoring
+
+Provide consistent metrics and visibility across device vendors.
+:::
+:::
 
 ---
 
@@ -118,6 +175,7 @@ HAMi-Core uses **symbolic hijacking** inside containers:
 
 HAMi enables elastic GPU memory scaling: idle tasks swap to host RAM, freeing device memory for active workloads:
 
+::: card
 ```seaborn
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
@@ -164,7 +222,62 @@ ax.text(11.5, 0, "Traffic spike", ha="center", va="center", fontsize=7.5, color=
 ax.text(10, -0.42, "10 GB\nsoft limit", ha="center", va="top", fontsize=7.5, color=dimmed)
 ax.text(15, -0.42, "15 GB\nburst", ha="center", va="top", fontsize=7.5, color=dimmed)
 ```
+:::
 
+:::card
+```seaborn
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 2.8))
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+green = cmap(2.5 / 12)
+blue = cmap(0.5 / 12)
+red = cmap(4.5 / 12)
+grey = "#9ca3af"
+sleep_bg = "#374151"
+
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+# Top: IDLE(25) + EXECUTING(50) + IDLE(25)
+ax.barh(1, 25, color=grey, height=0.65)
+ax.barh(1, 50, left=25, color=green, height=0.65)
+ax.barh(1, 25, left=75, color=grey, height=0.65)
+
+# Bottom: EXECUTING(25) + SLEEP(50) + EXECUTING(25)
+ax.barh(0, 25, color=blue, height=0.65)
+ax.barh(0, 50, left=25, color=sleep_bg, height=0.65)
+ax.barh(0, 25, left=75, color=blue, height=0.65)
+
+# Segment dividers
+for x in [25, 75]:
+    ax.plot([x, x], [0.62, 1.38], color=fg, linewidth=0.8, linestyle="--")
+    ax.plot([x, x], [-0.38, 0.62], color=fg, linewidth=0.8, linestyle="--")
+
+ax.set_xlim(0, 100)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+# Side labels
+ax.text(0, 1.38, "HIGH PRIORITY", ha="left", va="bottom", fontsize=10, color=green, fontweight="bold")
+ax.text(0, 0.38, "LOW PRIORITY", ha="left", va="bottom", fontsize=10, color=blue, fontweight="bold")
+
+# Top bar labels
+ax.text(12.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 1, "EXECUTING", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+ax.text(87.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+
+# Bottom bar labels
+ax.text(12.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 0, "SLEEP", ha="center", va="center", fontsize=9, color=red, fontweight="bold")
+ax.text(87.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+
+ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, color=red)
+```
+:::
 ---
 
 ## Priority Preemption
@@ -423,24 +536,6 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 | KEDA | Event-driven autoscaling |
 | Prometheus + Grafana | Monitoring and observability |
 | Helm | One-command deployment |
-
----
-
-## What You'll Learn
-
-- **GPU Sharing Mechanics:** How DRA and HAMi interact with the Kubernetes scheduler, and where the abstraction breaks down
-- **Production Blueprint:** Viettel Cloud's deployment of AI Notebooks with fractional GPUs, including isolation techniques and real utilization numbers
-- **Problem → Solution → Implementation:** The full pipeline from identifying GPU underutilization to deploying a production vGPU platform at telco scale
-
----
-
-## Benefit to the Ecosystem
-
-- **CNCF Incubation project**: vendor-neutral GPU sharing for any Kubernetes environment
-- **Hardware-agnostic:** NVIDIA, Ascend, Cambricon, Hygon, Iluvatar: one API, any accelerator
-- **Community-driven:** 80+ contributors, open governance, public roadmap
-- **Viettel as reference architecture:** production blueprint other telcos and enterprises can adopt
-- **Reduces e-waste:** better GPU utilization means fewer GPUs purchased, lower datacenter power draw
 
 ---
 

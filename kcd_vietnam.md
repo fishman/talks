@@ -1,6 +1,6 @@
 ---
 theme: kcd_vietnam
-title: From Project to Production: HAMi and Viettel Cloud
+title: "From Project to Production: HAMi and Viettel Cloud"
 footer: HAMi - Heterogeneous AI Computing Virtualization Middleware
 paginate: true
 ---
@@ -8,9 +8,9 @@ paginate: true
 @variant dark
 @kicker A CNCF Incubation Project
 
-# From Project to Production
+# HAMi and Viettel Cloud: From Project to Production
 
-@subtitle HAMi and Viettel Cloud<br>Fractional GPU Virtualization for Multi-tenant AI Notebooks
+@subtitle Fractional GPU Virtualization for Multi-tenant AI Notebooks
 
 ---
 

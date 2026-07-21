@@ -516,8 +516,6 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 @layout ecosystem
 ## Ecosystem
 
-
-
 ### Open Source, CNCF Backed, Production Ready
 ::: grid {cols=5}
 ::: card {metric}
@@ -536,7 +534,6 @@ Contributors
 17
 Contributor Countries
 :::
-### Seamless Integrations
 ::: card
 
 ![Kubernetes](assets/ecosystem/integrations/kubernetes.png) ![Volcano](assets/ecosystem/integrations/volcano.png) ![Kueue](assets/ecosystem/integrations/kueue.png) ![Koordinator](assets/ecosystem/integrations/koordinator.png)

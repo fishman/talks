@@ -4,20 +4,22 @@ Talk slide decks built with [slidr](https://github.com/slidr-cli/slidr).
 
 ## Setup
 
+```bash
+git clone --recurse-submodules <this-repo>
+# or if already cloned:
+git submodule update --init
+pdm install
+```
 
-
-Slidr must be cloned alongside as `../slidr`.
+`pdm install` installs slidr from the `slidr/` submodule so `pdm run slidr`
+works from the project root.
 
 ## Build
 
 ```bash
-make snow_corp_cncf     # build a specific deck
-make                    # build all
-make watch-snow_corp_cncf  # watch and rebuild
+make                    # build all decks
+make watch-<deck>       # watch and rebuild
 ```
-
-Slidr is referenced from `../slidr` via `pdm`. Install slidr first, then
-build decks from this directory.
 
 ## Decks
 

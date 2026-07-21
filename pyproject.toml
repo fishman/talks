@@ -2,10 +2,14 @@
 name = "talks-slide-decks"
 version = "0.1.0"
 description = "Talk slide decks built with slidr"
+requires-python = ">=3.11"
+dependencies = ["slidr @ file:///${PROJECT_ROOT}/slidr"]
 
 [tool.pdm]
 # Build slides: pdm run slidr <deck>.md
 
+[tool.pdm.workspace]
+members = ["slidr"]
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

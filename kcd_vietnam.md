@@ -278,9 +278,11 @@ ax.text(87.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
 ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, color=red)
 ```
 :::
+
 ---
 
 ## Priority Preemption
+@hidden
 
 High-priority tasks preempt low-priority ones at CUDA kernel boundaries: no wasted compute, clean context switch:
 
@@ -369,58 +371,41 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 ---
 
 ## GPU Sharing Parameters
+@hidden
 
 - : memory size per GPU. Defaults to all available if not set
 - : compute percentage per GPU. 0-100 range.
 
 ---
 
+@layout image-right
+
 ## Scheduling Policies
 
-::: grid {cols=2}
-::: card {tag=cyan}
-### {icon:arrow-up cls=accent-primary} Priority-based
-
-High-priority pods pause lower-priority tasks. Set via  env var.
-:::
-::: card {tag=green}
-### {icon:gauge cls=accent-contrast} Binpack & Spread
-
-Binpack minimizes fragments. Spread distributes evenly across nodes/devices.
-:::
-::: card {tag=yellow}
-### {icon:git-branch cls=accent-contrast} Topology-aware
-
-NVLink-aware scheduling for multi-GPU efficiency. 25GB/s-1800GB/s vs PCIe 16GB/s.
-:::
-::: card {tag=cyan}
-### {icon:crosshair cls=accent-primary} Device-specific
-
-Specify exact GPU models or specific device UUIDs for task placement.
-:::
-:::
-
----
-
-@layout two-col
-
-## Scheduling Strategies
+@subtitle Binpack & Spread
 
 ![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
 
-@col
+- **Node Binpack:** packs tasks onto fewer nodes to reduce fragmentation and free entire machines
+- **GPU Spread:** distributes workloads across available GPUs for maximum parallelism
+- **When it matters:** mixed small/large workloads on shared clusters -- binpack consolidates, spread balances burst traffic
+
+---
+
+@layout image-right
+
+## Scheduling Policies
+
+@subtitle Topology-Aware
 
 ![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
----
-
-## Specify Device Type
-
-HAMi supports targeting or avoiding specific GPU models:
-
-Schedule tasks to specific GPU models or avoid certain types entirely.
+- **NVLink:** 25 GB/s to 1800 GB/s inter-GPU bandwidth, ideal for multi-GPU training
+- **PCIe:** 16 GB/s, bottleneck for cross-GPU communication
+- **HAMi topology policy:** schedules multi-GPU workloads to NVLink-connected devices, avoids PCIe bridge pairs
 
 ---
+
 
 ## GPU Sharing Methods Compared
 
@@ -522,6 +507,64 @@ Inference gets priority, training fills gaps. When inference idle, cached traini
 ### {icon:zap cls=accent-primary} LLM Optimization
 
 Multiple small models (embedding, reranker, generator) share GPUs. 4 threads → 8 threads on same hardware.
+:::
+:::
+
+---
+
+
+@layout ecosystem
+## Ecosystem
+
+
+
+### Open Source, CNCF Backed, Production Ready
+::: grid {cols=5}
+::: card {metric}
+3.1k
+Github Stars
+:::
+::: card {metric}
+114k
+Docker Pulls
+:::
+::: card {metric}
+500+
+Contributors
+:::
+::: card {metric}
+17
+Contributor Countries
+:::
+### Seamless Integrations
+::: card
+
+![Kubernetes](assets/ecosystem/integrations/kubernetes.png) ![Volcano](assets/ecosystem/integrations/volcano.png) ![Kueue](assets/ecosystem/integrations/kueue.png) ![Koordinator](assets/ecosystem/integrations/koordinator.png)
+:::
+:::
+
+@row
+
+### Ecosystem & Device Support
+
+::: grid {cols=2}
+::: card
+![NVIDIA](assets/ecosystem/devices/nvidia.png) ![Ascend](assets/ecosystem/devices/ascend.png) ![Cambricon](assets/ecosystem/devices/cambricon.png) ![Hygon](assets/ecosystem/devices/hygon.png) ![Iluvatar](assets/ecosystem/devices/illuvitar.png)
+![Metax](assets/ecosystem/devices/metax.png) ![Moore Threads](assets/ecosystem/devices/moorethreads.png) ![Kunlunxin](assets/ecosystem/devices/kunlunxin.png) ![Enflame](assets/ecosystem/devices/enflame.png)
+![AWS](assets/ecosystem/devices/aws.png) ![VastStream](assets/ecosystem/devices/vaststream.png)
+:::
+:::
+
+@row
+
+### Adopters
+
+::: grid {cols=2}
+::: card
+![4Paradigm](assets/ecosystem/adopters/4paradigm.png) ![Baidu](assets/ecosystem/adopters/baiduzhineng.png) ![Baike](assets/ecosystem/adopters/baike.png) ![China Merchants](assets/ecosystem/adopters/chinamerchants.png) ![China Mobile](assets/ecosystem/adopters/chinamobile.png)
+![China Unicom](assets/ecosystem/adopters/chinaunicom.png) ![DaoCloud](assets/ecosystem/adopters/daocloud.png) ![Dynamia](assets/ecosystem/adopters/dynamia.png) ![H3C](assets/ecosystem/adopters/h3c.png) ![Huawei](assets/ecosystem/adopters/huawei.png)
+![LinkedIn](assets/ecosystem/adopters/linkedin.png) ![MSXF](assets/ecosystem/adopters/msxf.png) ![NIO](assets/ecosystem/adopters/nio.png) ![PPIO](assets/ecosystem/adopters/ppio.png) ![Prep](assets/ecosystem/adopters/prep.png)
+![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
 :::
 

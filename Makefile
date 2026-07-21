@@ -1,5 +1,5 @@
 SLIDR := $(abspath ../slidr)
-DECKS := snow_corp_cncf hami_intro
+DECKS := snow_corp_cncf hami_intro kcd_vietnam
 HTMLS := $(addprefix dist/,$(addsuffix .html,$(DECKS)))
 
 all: $(HTMLS)

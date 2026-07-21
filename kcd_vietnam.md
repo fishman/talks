@@ -171,6 +171,7 @@ ax.text(15, -0.42, "15 GB\nburst", ha="center", va="top", fontsize=7.5, color=di
 
 High-priority tasks preempt low-priority ones at CUDA kernel boundaries: no wasted compute, clean context switch:
 
+:::card
 ```seaborn
 import matplotlib.pyplot as plt
 
@@ -223,6 +224,7 @@ ax.text(87.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
 
 ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, color=red)
 ```
+:::
 
 ---
 
@@ -272,18 +274,11 @@ High-priority pods pause lower-priority tasks. Set via  env var.
 ### {icon:gauge cls=accent-contrast} Binpack & Spread
 
 Binpack minimizes fragments. Spread distributes evenly across nodes/devices.
-
-![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
 :::
-:::
-
-::: grid {cols=2}
 ::: card {tag=yellow}
 ### {icon:git-branch cls=accent-contrast} Topology-aware
 
 NVLink-aware scheduling for multi-GPU efficiency. 25GB/s-1800GB/s vs PCIe 16GB/s.
-
-![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 :::
 ::: card {tag=cyan}
 ### {icon:crosshair cls=accent-primary} Device-specific
@@ -291,6 +286,18 @@ NVLink-aware scheduling for multi-GPU efficiency. 25GB/s-1800GB/s vs PCIe 16GB/s
 Specify exact GPU models or specific device UUIDs for task placement.
 :::
 :::
+
+---
+
+@layout two-col
+
+## Scheduling Strategies
+
+![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
+
+@col
+
+![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
 ---
 

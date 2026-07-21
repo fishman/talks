@@ -52,6 +52,19 @@ SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users acro
 @subtitle GPU Sharing, Scheduling & DRA
 
 ---
+---
+
+## What is HAMi
+
+![Before HAMi](assets/hami_intro/before-hami.png)
+
+---
+
+## What is HAMi
+
+![After HAMi](assets/hami_intro/after-hami.png)
+
+---
 
 ## Device Plugin vs DRA
 
@@ -84,29 +97,82 @@ SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users acro
 
 ---
 
-## What is vGPU Sharing
+## HAMi Capabilities
 
-::: grid {cols=3}
-::: card {tag=green}
-### {icon:scissors cls=accent-primary} Slice
+::: grid {cols=2}
+::: card
+### {icon:layers cls=accent-primary} Heterogeneous Management
 
-One physical GPU sliced into multiple virtual GPUs. Fine-grained, transparent.
+Manage and schedule GPU, NPU, MLU, and other accelerators in one workflow.
 :::
-::: card {tag=cyan}
-### {icon:users cls=accent-primary} Share
+::: card
+### {icon:shield-check cls=accent-primary} Hard Isolation
 
-Multiple tasks or users allocate GPU fractions without knowing about each other.
+Slice memory and compute precisely with hard isolation at runtime.
 :::
-::: card {tag=yellow}
-### {icon:box cls=accent-contrast} Assign
+::: card
+### {icon:git-branch cls=accent-contrast} Advanced Scheduling
 
-Each vGPU assigned to a Kubernetes pod independently via the scheduler.
+Use binpack, spread, and topology-aware policies for better placement.
+:::
+::: card
+### {icon:box cls=accent-primary} Kubernetes Native
+
+Work with Kubernetes APIs, DRA, and CDI for easier adoption.
+:::
+::: card
+### {icon:gauge cls=accent-primary} Resource Isolation & QoS
+
+Control memory and core quotas for fairer and more stable sharing.
+:::
+::: card
+### {icon:chart-bar cls=accent-contrast} Unified Monitoring
+
+Provide consistent metrics and visibility across device vendors.
 :::
 :::
 
-::: notes{ tag="green" }
-> HAMi virtualizes GPU resources at the scheduler level. No hardware changes, no driver modifications, no code rewrites.
-:::
+---
+
+## GPU Sharing
+
+@subtitle Dynamic fine-grained device slicing
+
+- **All NVIDIA series** supported
+- **Fine-grained:** as small as 1MB device memory, 1% computing cores
+- **Transparent to tasks** - no code changes required
+- **Hard resource isolation** inside containers
+
+HAMi provides device sharing by dynamic device slicing. A task allocates a portion of GPU, leaving the rest for other tasks.
+
+---
+
+## How GPU Sharing Works
+
+HAMi-Core uses **symbolic hijacking** inside containers:
+
+| Requirement | Specification |
+|-------------|---------------|
+| NVIDIA driver | >= 440 |
+| CUDA | >= 10.2 |
+| Device Memory isolation | Yes |
+| Core utilization limit | Yes |
+| Fault isolation | Yes |
+| Transparent to GPU tasks | Yes |
+
+---
+
+## HAMi vs Other Projects
+
+| Feature | HAMi | NVIDIA device-plugin | NVIDIA DRA driver |
+|---------|:---:|:---:|:---:|
+| Multi-vendor GPUs | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+| GPU sharing | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
+| Flexible scheduling | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+| Dynamic MIG | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+| Memory oversubscription | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+| Topology-aware | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+| Heterogeneous devices | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
 ---
 
@@ -147,15 +213,59 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 
 @layout image-right
 
-## HAMi Scheduler Flow
+## Scheduling Policies
 
-![HAMi Scheduler](assets/dra/100000000000047B0000047BA201FBD4.png)
+@subtitle Binpack & Spread
+
+![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
+
+- **Node Binpack:** packs tasks onto fewer nodes to reduce fragmentation and free entire machines
+- **GPU Spread:** distributes workloads across available GPUs for maximum parallelism
+- **When it matters:** mixed small/large workloads on shared clusters -- binpack consolidates, spread balances burst traffic
+
+---
+
+@layout image-right
+
+## Scheduling Policies
+
+@subtitle Topology-Aware
+
+![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
+
+- **NVLink:** 25 GB/s to 1800 GB/s inter-GPU bandwidth, ideal for multi-GPU training
+- **PCIe:** 16 GB/s, bottleneck for cross-GPU communication
+- **HAMi topology policy:** schedules multi-GPU workloads to NVLink-connected devices, avoids PCIe bridge pairs
+
+---
+
+## GPU Sharing Methods Compared
+
+| Method | Multi-vendor | Isolation | Fragmentation | Overhead |
+|--------|:---:|:---:|:---:|:---:|
+| HAMi vGPU | {icon:check cls=accent-primary} | Strong | Low | Low |
+| CUDA Streams | {icon:x cls=accent-secondary} | Weak | High | Low |
+| MPS | {icon:x cls=accent-secondary} | Medium | Low | Medium |
+| Time-slicing | {icon:x cls=accent-secondary} | Weak | High | Low |
+| MIG | {icon:x cls=accent-secondary} | Strong | High | N/A |
+| NVIDIA vGPU | {icon:x cls=accent-secondary} | Strong | Low | High |
 
 ---
 
 # PART 2  -  Problem
 
-@subtitle The Challenge
+@subtitle GPU underutilization, atomic allocation, multi-tenant contention
+
+---
+
+## The Problem
+
+Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low utilization in multi-tenant AI Notebooks. DRA and HAMi's vGPU virtualization solve this, but only if implemented correctly.
+
+- GPUs are **allocated whole**: a 1GB inference task blocks an entire 80GB device
+- **Over-provisioning** is the default: request peak, burn budget, idle silicon
+- **DRA** (Dynamic Resource Allocation) enables structured GPU requests but doesn't solve sharing
+- **HAMi** provides the fractional GPU layer DRA needs for fine-grained allocation
 
 ---
 

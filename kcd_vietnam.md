@@ -1058,9 +1058,6 @@ Contributor Countries
 ![LinkedIn](assets/ecosystem/adopters/linkedin.png) ![MSXF](assets/ecosystem/adopters/msxf.png) ![NIO](assets/ecosystem/adopters/nio.png) ![PPIO](assets/ecosystem/adopters/ppio.png) ![Prep](assets/ecosystem/adopters/prep.png)
 ![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
-::: card {side-image}
-![GitHub QR](assets/ecosystem/github-qr.png)
-:::
 :::
 
 ---
@@ -1080,7 +1077,7 @@ Contributor Countries
 ---
 
 @kicker Thank You
-
+@side-image assets/ecosystem/github-qr.png
 # Questions?
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh

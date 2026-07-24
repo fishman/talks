@@ -1053,20 +1053,6 @@ Contributor Countries
 
 ---
 
-## Ecosystem Integrations
-
-@subtitle Volcano, Koordinator, KEDA, Helm
-
-| Project | Integration |
-|---------|-------------|
-| Volcano | Batch scheduling for HPC/AI workloads (CNCF) |
-| Koordinator | Colocation of microservices, AI, big data |
-| KEDA | Event-driven autoscaling |
-| Prometheus + Grafana | Monitoring and observability |
-| Helm | One-command deployment |
-
----
-
 @kicker Thank You
 @side-image assets/ecosystem/github-qr.png
 # Questions?

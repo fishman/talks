@@ -112,6 +112,34 @@ Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU avail
 
 ---
 
+@layout image-right
+
+@layout image-right
+
+## DRA: ResourceSlice
+
+@subtitle Per-node device inventory published by DRA drivers
+
+![ResourceSlice](assets/hami/dra-resource-slice.png)
+
+- **ResourceSlice:** lists all available devices on a node with their attributes
+- DRA drivers publish slices; scheduler reads them to match claims to devices
+- Tied to a node via `nodeName`, supports topology and NUMA attributes
+
+---
+
+@layout image-right
+
+## DRA: ResourceClaim
+
+@subtitle A standardized way to request hardware: not just GPUs. Stable in K8s 1.34.
+
+![ResourceClaim and ResourceClaimTemplate](assets/hami/dra-resource-claim.png)
+
+- **DeviceClass:** groups devices with identical resource models. **ResourceClaim:** a workload's ticket to hardware. **ResourceClaimTemplate:** reusable blueprint, auto-creates a claim per Pod.
+
+---
+
 ## HAMi Capabilities
 
 @subtitle Six things HAMi brings to GPU scheduling

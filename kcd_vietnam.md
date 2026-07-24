@@ -978,34 +978,6 @@ Contributor Countries
 
 ---
 
-## HAMi Community
-
-@subtitle 80+ contributors, 100+ enterprise adopters
-
-| Metric | Value |
-|--------|-------|
-| Contributors | 80+ |
-| Enterprise adopters | 100+ |
-| CNCF Status | Incubation + CNAI Landscape |
-| Focus | AI Infra + Heterogeneous AI Management |
-
-The only open-source project focused on AI Infrastructure and heterogeneous AI management in CNCF.
-
----
-
-## About HAMi
-
-@subtitle CNCF Incubation, open source
-
-- {icon:git-fork cls=accent-primary} github.com/Project-HAMi/HAMi
-- {icon:globe cls=accent-primary} project-hami.io
-- {icon:users cls=accent-primary} 80+ contributors, 100+ enterprise adopters
-- {icon:shield-check cls=accent-primary} CNCF Incubation Project
-
-Community edition is free and open-source. Enterprise edition available with additional features and support.
-
----
-
 @kicker Thank You
 
 # Questions?

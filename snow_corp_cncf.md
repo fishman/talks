@@ -299,16 +299,20 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 
 ---
 
+@layout image-right
+
 ## The Problem
 
 @subtitle Atomic GPU allocation wastes silicon
 
-Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low utilization in multi-tenant AI Notebooks. DRA and HAMi's vGPU virtualization solve this, but only if implemented correctly.
+Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
-- GPUs are **allocated whole**: a 1GB inference task blocks an entire 80GB device
-- **Over-provisioning** is the default: request peak, burn budget, idle silicon
-- **DRA** (Dynamic Resource Allocation) enables structured GPU requests but doesn't solve sharing
-- **HAMi** provides the fractional GPU layer DRA needs for fine-grained allocation
+- 1 GB task blocks an 80 GB device
+- Over-provisioning is the default: idle silicon
+- DRA allocates via Structured Parameters, but slicing is MIG-only
+- Why HAMi if DRA slices? We'll get to that
+
+![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
 
 ---
 

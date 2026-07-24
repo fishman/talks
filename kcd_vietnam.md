@@ -37,6 +37,8 @@ style: |
 
 ---
 
+@layout image-right
+
 ## The Problem
 
 @subtitle Atomic GPU allocation wastes silicon
@@ -47,6 +49,8 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 - Over-provisioning is the default: idle silicon
 - DRA allocates via Structured Parameters, but slicing is MIG-only
 - Why HAMi if DRA slices? We'll get to that
+
+![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
 
 ---
 
@@ -70,6 +74,41 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 # Part 2: The Solution
 
 @subtitle Fractional GPU allocation and scheduling
+
+---
+
+@layout compare
+
+## The GPU Challenge
+
+@subtitle What breaks, what HAMi fixes
+
+::: card {tag=compare}
+### Without HAMi
+
+- GPUs are scarce, allocated whole
+- Vendors locked in, supply tight
+- Utilization stuck at ~30%
+- No central observability
+- Fragmented inference workloads
+:::
+
+::: arrow
+
+{icon:arrow-right cls=accent-primary size=48}
+:::
+
+::: card {tag=compare}
+### With HAMi
+
+- Hardware agnostic: one API, any accelerator
+- Fractional GPU: 1MB slices, multiple tasks per device
+- Advanced scheduling: binpack, spread, topology-aware
+:::
+
+::: notes{ tag="green" }
+Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
+:::
 
 ---
 
@@ -110,40 +149,55 @@ Consistent metrics and visibility across vendors.
 :::
 :::
 
+
 ---
 
-@layout compare
+@layout two-col
 
-## The GPU Challenge
+## How HAMi Works
 
-@subtitle What breaks, what HAMi fixes
+@subtitle Pod creation to GPU isolation
 
-::: card {tag=compare}
-### Without HAMi
+HAMi intercepts pod creation and GPU allocation through seven stages:
 
-- GPUs are scarce, allocated whole
-- Vendors locked in, supply tight
-- Utilization stuck at ~30%
-- No central observability
-- Fragmented inference workloads
-:::
+- **Mutating webhook:** injects device request into pod spec
+- **Scheduler:** selects GPU and node via HAMi scheduler plugin
+- **Device plugin:** allocates GPU memory and compute cores
+- **Container runtime:** injects HAMi-Core library into container
+- **HAMi core:** enforces isolation in-process via symbolic hijacking
 
-::: arrow
+@col
 
-{icon:arrow-right cls=accent-primary size=48}
-:::
+```dot
+digraph G {
+  rankdir=TB
+  bgcolor=transparent
+  node [shape=box style="rounded,filled" fontname="Arial" fontsize=16 margin="0.25,0.18"]
+  edge [fontname="Arial" fontsize=12]
 
-::: card {tag=compare}
-### With HAMi
+  pod [label="Pod submitted" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+  webhook [label="Mutating webhook" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  sched [label="Scheduler" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  device [label="Device plugin" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
 
-- Hardware agnostic: one API, any accelerator
-- Fractional GPU: 1MB slices, multiple tasks per device
-- Advanced scheduling: binpack, spread, topology-aware
-:::
+  runtime [label="Container runtime" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+  core [label="HAMi core" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  workload [label="Workload (isolated GPU)" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
 
-::: notes{ tag="green" }
-Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
-:::
+  { rank=same; pod; runtime }
+  { rank=same; webhook; core }
+  { rank=same; sched; workload }
+
+  pod -> webhook [label="inject request"]
+  webhook -> sched [label="select GPU+node"]
+  sched -> device [label="allocate\nmem/cores"]
+
+  device -> runtime [label="inject lib" constraint=false style=dashed]
+
+  runtime -> core [label="enforce isolation"]
+  core -> workload [label="sees isolated GPU"]
+}
+```
 
 ---
 
@@ -178,22 +232,6 @@ resources:
     nvidia.com/gpumem: 3000
 ```
 
----
-
-## How GPU Sharing Works
-
-@subtitle Symbolic hijacking inside containers
-
-HAMi-Core uses **symbolic hijacking** inside containers:
-
-| Requirement | Specification |
-|-------------|---------------|
-| NVIDIA driver | >= 440 |
-| CUDA | >= 10.2 |
-| Device Memory isolation | Yes |
-| Core utilization limit | Yes |
-| Fault isolation | Yes |
-| Transparent to GPU tasks | Yes |
 
 ---
 

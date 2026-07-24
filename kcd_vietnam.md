@@ -1011,10 +1011,8 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 
 @subtitle Community, devices, adopters
 
+#### Open Source, CNCF Backed, Production Ready
 ::: grid {cols=5}
-::: card {grid-heading}
-### Open Source, CNCF Backed, Production Ready
-:::
 ::: card {metric}
 4.1k
 Github Stars
@@ -1037,10 +1035,8 @@ Contributor Countries
 :::
 :::
 
+#### Ecosystem & Device Support
 ::: grid {cols=2}
-::: card {grid-heading}
-### Ecosystem & Device Support
-:::
 ::: card
 ![NVIDIA](assets/ecosystem/devices/nvidia.png) ![Ascend](assets/ecosystem/devices/ascend.png) ![Cambricon](assets/ecosystem/devices/cambricon.png) ![Hygon](assets/ecosystem/devices/hygon.png) ![Iluvatar](assets/ecosystem/devices/illuvitar.png)
 ![Metax](assets/ecosystem/devices/metax.png) ![Moore Threads](assets/ecosystem/devices/moorethreads.png) ![Kunlunxin](assets/ecosystem/devices/kunlunxin.png) ![Enflame](assets/ecosystem/devices/enflame.png)
@@ -1048,10 +1044,8 @@ Contributor Countries
 :::
 :::
 
+#### Adopters
 ::: grid {cols=2}
-::: card {grid-heading}
-### Adopters
-:::
 ::: card
 ![4Paradigm](assets/ecosystem/adopters/4paradigm.png) ![Baidu](assets/ecosystem/adopters/baiduzhineng.png) ![Baike](assets/ecosystem/adopters/baike.png) ![China Merchants](assets/ecosystem/adopters/chinamerchants.png) ![China Mobile](assets/ecosystem/adopters/chinamobile.png)
 ![China Unicom](assets/ecosystem/adopters/chinaunicom.png) ![DaoCloud](assets/ecosystem/adopters/daocloud.png) ![Dynamia](assets/ecosystem/adopters/dynamia.png) ![H3C](assets/ecosystem/adopters/h3c.png) ![Huawei](assets/ecosystem/adopters/huawei.png)

@@ -27,8 +27,7 @@ style: |
 @subtitle Problem, solution, production case study
 
 - **GPU Sharing Mechanics:** How DRA and HAMi interact with the Kubernetes scheduler, and where the abstraction breaks down
-- **Blueprint:** Viettel Cloud's deployment of fractional GPUs across notebooks, inference and training, including isolation techniques and real utilization numbers
-- **Problem → Solution → Implementation:** The full pipeline from identifying GPU underutilization to deploying a production vGPU platform at telco scale
+- **Blueprint:** How Viettel Cloud runs fractional GPUs in production - across notebooks, inference and training - with the isolation limits and the real utilization numbers we measured
 
 ---
 

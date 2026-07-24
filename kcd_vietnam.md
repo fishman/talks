@@ -1016,11 +1016,11 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 ### Open Source, CNCF Backed, Production Ready
 :::
 ::: card {metric}
-3.1k
+4.1k
 Github Stars
 :::
 ::: card {metric}
-114k
+325k
 Docker Pulls
 :::
 ::: card {metric}
@@ -1028,7 +1028,7 @@ Docker Pulls
 Contributors
 :::
 ::: card {metric}
-17
+27
 Contributor Countries
 :::
 ::: card

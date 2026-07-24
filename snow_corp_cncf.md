@@ -253,9 +253,12 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 
 ![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
-- **NVLink:** 25 GB/s to 1800 GB/s inter-GPU bandwidth, ideal for multi-GPU training
-- **PCIe:** 16 GB/s, bottleneck for cross-GPU communication
-- **HAMi topology policy:** schedules multi-GPU workloads to NVLink-connected devices, avoids PCIe bridge pairs
+- **NVLink 3 (A100):** 600 GB/s, 12 links
+- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
+- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
+- **NVLink 6 (Rubin):** ~3.6 TB/s target
+- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
+- **HAMi topology policy:** prefers NVLink-connected devices, avoids PCIe bridge pairs
 
 ---
 

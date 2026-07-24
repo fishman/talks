@@ -26,8 +26,8 @@ style: |
 
 @subtitle Problem, solution, production case study
 
-- **GPU Sharing Mechanics:** How DRA and HAMi interact with the Kubernetes scheduler, and where the abstraction breaks down
-- **Blueprint:** How Viettel Cloud runs fractional GPUs in production - across notebooks, inference and training - with the isolation limits and the real utilization numbers we measured
+- **GPU Sharing:** How DRA + HAMi interact with the scheduler, and where abstractions break
+- **Blueprint:** Viettel Cloud's fractional GPU production stack: notebooks, inference, training: with real isolation limits and utilization data
 
 ---
 
@@ -41,12 +41,12 @@ style: |
 
 @subtitle Atomic GPU allocation wastes silicon
 
-Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low utilization across multi-tenant AI workloads - notebooks, inference and training alike. DRA and HAMi's vGPU virtualization solve this, but only if implemented correctly.
+Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
-- GPUs are **allocated whole**: a 1GB inference task blocks an entire 80GB device
-- **Over-provisioning** is the default: request peak, burn budget, idle silicon
-- **DRA** (Dynamic Resource Allocation) enables structured GPU requests but doesn't solve sharing
-- **HAMi** provides the fractional GPU layer DRA needs for fine-grained allocation
+- 1 GB task blocks an 80 GB device
+- Over-provisioning is the default: idle silicon
+- DRA allocates via Structured Parameters, but slicing is MIG-only
+- Why HAMi if DRA slices? We'll get to that
 
 ---
 
@@ -81,32 +81,32 @@ Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low ut
 ::: card
 ### {icon:layers cls=accent-primary} Heterogeneous Management
 
-Manage and schedule GPU, NPU, MLU, and other accelerators in one workflow.
+Manage GPU, NPU, MLU, and other accelerators in one workflow.
 :::
 ::: card
 ### {icon:shield-check cls=accent-primary} Hard Isolation
 
-Slice memory and compute precisely with hard isolation at runtime.
+Slice memory and compute with hard isolation at runtime.
 :::
 ::: card
 ### {icon:git-branch cls=accent-contrast} Advanced Scheduling
 
-Use binpack, spread, and topology-aware policies for better placement.
+Binpack, spread, and topology-aware placement policies.
 :::
 ::: card
 ### {icon:box cls=accent-primary} Kubernetes Native
 
-Work with Kubernetes APIs, DRA, and CDI for easier adoption.
+Kubernetes-native APIs, DRA, and CDI support.
 :::
 ::: card
 ### {icon:gauge cls=accent-primary} Resource Isolation & QoS
 
-Control memory and core quotas for fairer and more stable sharing.
+Memory and core quotas for fair, stable sharing.
 :::
 ::: card
 ### {icon:chart-bar cls=accent-contrast} Unified Monitoring
 
-Provide consistent metrics and visibility across device vendors.
+Consistent metrics and visibility across vendors.
 :::
 :::
 
@@ -120,18 +120,18 @@ Provide consistent metrics and visibility across device vendors.
 ::: card {tag=red}
 ### Supply Side
 
-- Many GPU manufacturers (NVIDIA, AMD, Intel, Huawei Ascend)
-- Specifications vary widely
-- Centralized management is difficult
-- Resource scheduling is rough
+- Many vendors (NVIDIA, AMD, Intel, Huawei)
+- Specs vary widely
+- Central management is hard
+- Scheduling is coarse
 :::
 ::: card {tag=yellow}
 ### Demand Side
 
-- GPU resources are scarce
+- GPUs are scarce
 - Users are cost-sensitive
-- Inference demands are fragmented
-- Utilization is often low
+- Inference is fragmented
+- Utilization is low
 :::
 :::
 
@@ -141,11 +141,11 @@ Provide consistent metrics and visibility across device vendors.
 
 @subtitle What breaks when GPUs are atomic
 
-- {icon:server cls=accent-secondary} No resource pool, no overall scheduling, no management plane
-- {icon:layers cls=accent-secondary} GPUs scattered, difficult to manage centrally
-- {icon:lock cls=accent-secondary} No GPU sharing - 1 GPU per task minimum
-- {icon:chart-bar cls=accent-secondary} Resource allocation is inflexible, cannot specify size/type
-- {icon:triangle-alert cls=accent-secondary} No GPU over-division, wasted capacity
+- {icon:server cls=accent-secondary} No resource pool, no central scheduling
+- {icon:layers cls=accent-secondary} GPUs scattered, hard to manage
+- {icon:lock cls=accent-secondary} No GPU sharing: 1 GPU per task
+- {icon:chart-bar cls=accent-secondary} Inflexible allocation, no size/type control
+- {icon:triangle-alert cls=accent-secondary} No over-division, wasted capacity
 
 ---
 
@@ -155,11 +155,11 @@ Provide consistent metrics and visibility across device vendors.
 
 Heterogeneous AI Computing Virtualization Middleware
 
-- {icon:zap cls=accent-primary} Pluggable, lightweight, deploys in any Kubernetes environment
-- {icon:layers cls=accent-primary} Virtualizes heterogeneous AI chips (NVIDIA, Ascend, Cambricon, Hygon, Iluvatar)
-- {icon:share cls=accent-primary} GPU sharing - multiple tasks share one GPU
-- {icon:settings-2 cls=accent-primary} Rich scheduling strategies: binpack, spread, priority, topology-aware
-- {icon:shield-check cls=accent-primary} CNCF Incubation project, 80+ contributors, 100+ enterprise adopters
+- {icon:zap cls=accent-primary} Pluggable, lightweight, any Kubernetes environment
+- {icon:layers cls=accent-primary} Virtualizes NVIDIA, Ascend, Cambricon, Hygon, Iluvatar
+- {icon:share cls=accent-primary} Multiple tasks share one GPU
+- {icon:settings-2 cls=accent-primary} Binpack, spread, priority, topology-aware scheduling
+- {icon:shield-check cls=accent-primary} CNCF Incubation, 80+ contributors, 100+ adopters
 
 ---
 
@@ -172,7 +172,7 @@ Heterogeneous AI Computing Virtualization Middleware
 - **Transparent to tasks** - no code changes required
 - **Hard resource isolation** inside containers
 
-HAMi provides device sharing by dynamic device slicing. A task allocates a portion of GPU, leaving the rest for other tasks.
+A task allocates a GPU slice, leaving the rest free for others.
 
 ---
 
@@ -197,7 +197,7 @@ HAMi-Core uses **symbolic hijacking** inside containers:
 
 @subtitle Idle tasks swap to host RAM
 
-HAMi enables elastic GPU memory scaling: idle tasks swap to host RAM, freeing device memory for active workloads:
+Idle tasks swap to host RAM, freeing device memory for active workloads:
 
 ::: card
 ```seaborn
@@ -403,8 +403,8 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 @subtitle Fine-grained control per task
 @hidden
 
-- : memory size per GPU. Defaults to all available if not set
-- : compute percentage per GPU. 0-100 range.
+- : GPU memory size, defaults to all available
+- : compute percentage, 0-100
 
 ---
 
@@ -416,9 +416,10 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 
 ![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
 
-- **Node Binpack:** packs tasks onto fewer nodes to reduce fragmentation and free entire machines
-- **GPU Spread:** distributes workloads across available GPUs for maximum parallelism
-- **When it matters:** mixed small/large workloads on shared clusters -- binpack consolidates, spread balances burst traffic
+- **Node binpack** frees whole machines: reduces cost, helps cluster autoscaler
+- **Node spread** isolates faults: HA across zones, blast radius control
+- **GPU binpack** prevents fragmentation: frees entire GPUs for training
+- **GPU spread** protects tail latency: reduces HBM and NVLink contention
 
 ---
 
@@ -430,9 +431,12 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 
 ![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
-- **NVLink:** 25 GB/s to 1800 GB/s inter-GPU bandwidth, ideal for multi-GPU training
-- **PCIe:** 16 GB/s, bottleneck for cross-GPU communication
-- **HAMi topology policy:** schedules multi-GPU workloads to NVLink-connected devices, avoids PCIe bridge pairs
+- **NVLink 3 (A100):** 600 GB/s, 12 links
+- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
+- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
+- **NVLink 6 (Rubin):** ~3.6 TB/s target
+- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
+- **HAMi topology policy:** prefers NVLink-connected devices, avoids PCIe bridge pairs
 
 ---
 

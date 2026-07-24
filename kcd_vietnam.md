@@ -69,7 +69,7 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
 # Part 2: The Solution
 
-@subtitle How DRA + HAMi implement fractional GPU allocation and scheduling
+@subtitle Fractional GPU allocation and scheduling
 
 ---
 
@@ -112,67 +112,71 @@ Consistent metrics and visibility across vendors.
 
 ---
 
+@layout compare
+
 ## The GPU Challenge
 
-@subtitle Supply and demand are polarized
+@subtitle What breaks, what HAMi fixes
 
-::: grid {cols=2}
-::: card {tag=red}
-### Supply Side
+::: card {tag=compare}
+### Without HAMi
 
-- Many vendors (NVIDIA, AMD, Intel, Huawei)
-- Specs vary widely
-- Central management is hard
-- Scheduling is coarse
+- GPUs are scarce, allocated whole
+- Vendors locked in, supply tight
+- Utilization stuck at ~30%
+- No central observability
+- Fragmented inference workloads
 :::
-::: card {tag=yellow}
-### Demand Side
 
-- GPUs are scarce
-- Users are cost-sensitive
-- Inference is fragmented
-- Utilization is low
+::: arrow
+
+{icon:arrow-right cls=accent-primary size=48}
 :::
+
+::: card {tag=compare}
+### With HAMi
+
+- Hardware agnostic: one API, any accelerator
+- Fractional GPU: 1MB slices, multiple tasks per device
+- Advanced scheduling: binpack, spread, topology-aware
+:::
+
+::: notes{ tag="green" }
+Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
 :::
 
 ---
 
-## GPU Management Pain Points
-
-@subtitle What breaks when GPUs are atomic
-
-- {icon:server cls=accent-secondary} No resource pool, no central scheduling
-- {icon:layers cls=accent-secondary} GPUs scattered, hard to manage
-- {icon:lock cls=accent-secondary} No GPU sharing: 1 GPU per task
-- {icon:chart-bar cls=accent-secondary} Inflexible allocation, no size/type control
-- {icon:triangle-alert cls=accent-secondary} No over-division, wasted capacity
-
----
-
-## What is HAMi
-
-@subtitle One middleware, any accelerator
-
-Heterogeneous AI Computing Virtualization Middleware
-
-- {icon:zap cls=accent-primary} Pluggable, lightweight, any Kubernetes environment
-- {icon:layers cls=accent-primary} Virtualizes NVIDIA, Ascend, Cambricon, Hygon, Iluvatar
-- {icon:share cls=accent-primary} Multiple tasks share one GPU
-- {icon:settings-2 cls=accent-primary} Binpack, spread, priority, topology-aware scheduling
-- {icon:shield-check cls=accent-primary} CNCF Incubation: 4.1k stars, 325k pulls, 500+ contributors, 27 countries
-
----
+@layout two-col
 
 ## GPU Sharing
 
 @subtitle Dynamic fine-grained device slicing
 
-- **All NVIDIA series** supported
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
 - **Fine-grained:** as small as 1MB device memory, 1% computing cores
-- **Transparent to tasks** - no code changes required
+- **Transparent to tasks:** no code changes required
 - **Hard resource isolation** inside containers
+- One API across vendors: same YAML, any accelerator
 
-A task allocates a GPU slice, leaving the rest free for others.
+@col
+
+```yaml
+# Ascend 910C: 8GB + 20% compute
+resources:
+  limits:
+    huawei.com/Ascend910C: "1"
+    huawei.com/Ascend910C-core: "20"
+    huawei.com/Ascend910C-memory: "8192"
+```
+
+```yaml
+# NVIDIA: 3GB on any GPU
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 3000
+```
 
 ---
 
@@ -422,6 +426,7 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 - **Node spread** isolates faults: HA across zones, blast radius control
 - **GPU binpack** prevents fragmentation: frees entire GPUs for training
 - **GPU spread** protects tail latency: reduces HBM and NVLink contention
+- Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn or Volcano
 
 ---
 
@@ -443,47 +448,18 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 ---
 
 
-## GPU Sharing Methods Compared
 
-@subtitle vGPU vs CUDA streams vs MPS vs MIG
+## GPU Sharing Approaches
 
-| Method | Multi-vendor | Isolation | Fragmentation | Overhead |
-|--------|:---:|:---:|:---:|:---:|
-| HAMi vGPU | {icon:check cls=accent-primary} | Strong | Low | Low |
-| CUDA Streams | {icon:x cls=accent-secondary} | Weak | High | Low |
-| MPS | {icon:x cls=accent-secondary} | Medium | Low | Medium |
-| Time-slicing | {icon:x cls=accent-secondary} | Weak | High | Low |
-| MIG | {icon:x cls=accent-secondary} | Strong | High | N/A |
-| NVIDIA vGPU | {icon:x cls=accent-secondary} | Strong | Low | High |
-
----
-
-## HAMi vs Other Projects
-
-@subtitle Feature comparison across solutions
-
-| Feature | HAMi | NVIDIA device-plugin | NVIDIA DRA driver |
-|---------|:---:|:---:|:---:|
-| Multi-vendor GPUs | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| GPU sharing | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Flexible scheduling | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Dynamic MIG | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Memory oversubscription | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Topology-aware | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Heterogeneous devices | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-
----
-
-## MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+@subtitle MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
 
 | Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
 |------------|:---:|:---:|:---:|:---:|
-| Pre-configured templates | Required | Not needed | Not needed | Required |
-| Dynamic MIG repartition | No | Yes | Yes | No |
-| Symbolic hijacking (1MB slice) | No | Yes | Yes | No |
-| Multi-vendor | No | Yes | Yes | No |
-| Scheduling policies | No | Yes | Yes | No |
-| Kubernetes-native API | No | Plugin only | DRA + plugin | DRA only |
+| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Symbolic hijacking (1MB slice) | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
 MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
 

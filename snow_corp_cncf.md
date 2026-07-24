@@ -148,12 +148,12 @@ Provide consistent metrics and visibility across device vendors.
 
 @subtitle Dynamic fine-grained device slicing
 
-- **All NVIDIA series** supported
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
 - **Fine-grained:** as small as 1MB device memory, 1% computing cores
-- **Transparent to tasks** - no code changes required
+- **Transparent to tasks:** no code changes required
 - **Hard resource isolation** inside containers
 
-HAMi provides device sharing by dynamic device slicing. A task allocates a portion of GPU, leaving the rest for other tasks.
+One API across vendors: same YAML, any accelerator.
 
 ---
 
@@ -190,16 +190,17 @@ HAMi-Core uses **symbolic hijacking** inside containers:
 
 ---
 
-## MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+## GPU Sharing Approaches
+
+@subtitle MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
 
 | Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
 |------------|:---:|:---:|:---:|:---:|
-| Pre-configured templates | Required | Not needed | Not needed | Required |
-| Dynamic MIG repartition | No | Yes | Yes | No |
-| Symbolic hijacking (1MB slice) | No | Yes | Yes | No |
-| Multi-vendor | No | Yes | Yes | No |
-| Scheduling policies | No | Yes | Yes | No |
-| Kubernetes-native API | No | Plugin only | DRA + plugin | DRA only |
+| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Symbolic hijacking (1MB slice) | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
 MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
 

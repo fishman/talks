@@ -190,6 +190,21 @@ HAMi-Core uses **symbolic hijacking** inside containers:
 
 ---
 
+## MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+
+| Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
+|------------|:---:|:---:|:---:|:---:|
+| Pre-configured templates | Required | Not needed | Not needed | Required |
+| Dynamic MIG repartition | No | Yes | Yes | No |
+| Symbolic hijacking (1MB slice) | No | Yes | Yes | No |
+| Multi-vendor | No | Yes | Yes | No |
+| Scheduling policies | No | Yes | Yes | No |
+| Kubernetes-native API | No | Plugin only | DRA + plugin | DRA only |
+
+MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
+
+---
+
 ## HAMi + DRA: The Full Picture
 
 @subtitle Where each approach fits

@@ -159,7 +159,7 @@ Heterogeneous AI Computing Virtualization Middleware
 - {icon:layers cls=accent-primary} Virtualizes NVIDIA, Ascend, Cambricon, Hygon, Iluvatar
 - {icon:share cls=accent-primary} Multiple tasks share one GPU
 - {icon:settings-2 cls=accent-primary} Binpack, spread, priority, topology-aware scheduling
-- {icon:shield-check cls=accent-primary} CNCF Incubation, 80+ contributors, 100+ adopters
+- {icon:shield-check cls=accent-primary} CNCF Incubation: 4.1k stars, 325k pulls, 500+ contributors, 27 countries
 
 ---
 
@@ -194,6 +194,7 @@ HAMi-Core uses **symbolic hijacking** inside containers:
 ---
 
 ## GPU Utilization Impact
+@hidden
 
 @subtitle Idle tasks swap to host RAM
 
@@ -370,6 +371,7 @@ ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, co
 ---
 
 ## Memory Oversubscription
+@hidden
 
 @subtitle 23 GB device + 46 GB virtual = 3x models
 
@@ -469,6 +471,21 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 | Memory oversubscription | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 | Topology-aware | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 | Heterogeneous devices | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+
+---
+
+## MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+
+| Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
+|------------|:---:|:---:|:---:|:---:|
+| Pre-configured templates | Required | Not needed | Not needed | Required |
+| Dynamic MIG repartition | No | Yes | Yes | No |
+| Symbolic hijacking (1MB slice) | No | Yes | Yes | No |
+| Multi-vendor | No | Yes | Yes | No |
+| Scheduling policies | No | Yes | Yes | No |
+| Kubernetes-native API | No | Plugin only | DRA + plugin | DRA only |
+
+MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
 
 ---
 

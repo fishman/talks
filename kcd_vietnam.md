@@ -26,6 +26,10 @@ style: |
 
 @subtitle Problem, solution, production case study
 
+<!--
+Two things they will walk away with: how GPU sharing actually works under the hood, and a real production deployment story.
+-->
+
 - **GPU Sharing:** How DRA + HAMi interact with the scheduler, and where abstractions break
 - **Blueprint:** Viettel Cloud's fractional GPU production stack: notebooks, inference, training: with real isolation limits and utilization data
 
@@ -47,7 +51,7 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
 - 1 GB task blocks an 80 GB device
 - Over-provisioning is the default: idle silicon
-- DRA allocates via Structured Parameters, but slicing is MIG-only
+- DRA can request GPUs but requires MIG to slice
 - Why HAMi if DRA slices? We'll get to that
 
 ![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
@@ -57,6 +61,10 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 ## What is HAMi
 
 @subtitle Static allocation, one GPU per task
+
+<!--
+GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing framework for Kubernetes. It lets you slice and share GPUs across workloads, maximizing utilization without rewriting your entire stack.
+-->
 
 ![Before HAMi](assets/hami_intro/before-hami.png)
 
@@ -100,6 +108,10 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 - Advanced scheduling: binpack, spread, topology-aware
 :::
 
+<!--
+Heterogeneous GPU sharing means you can run NVIDIA A100s, H100s, Ascend or other devices on the same cluster without manual partitioning. HAMi handles the scheduling logic. The real work is memory isolation.
+-->
+
 ::: notes{ tag="green" }
 Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
 :::
@@ -112,13 +124,27 @@ Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU avail
 
 ---
 
-@layout image-right
+## DRA Feature Timeline
+
+@subtitle KEPs and their development status: we won't cover this today
+
+<!--
+Backup slide. Shows all DRA KEPs and their dev status. Mention that DRA is moving fast -- 1.34 stable. We will skip this but it is here for questions.
+-->
+
+![DRA Feature Timeline](assets/hami/dra-feature-timeline.png)
+
+---
 
 @layout image-right
 
 ## DRA: ResourceSlice
 
-@subtitle Per-node device inventory published by DRA drivers
+@subtitle Per-node device inventory
+
+<!--
+DRA drivers run on each node and publish what is available. The scheduler reads this. Think of it as a menu of devices.
+-->
 
 ![ResourceSlice](assets/hami/dra-resource-slice.png)
 
@@ -134,6 +160,10 @@ Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU avail
 
 @subtitle A standardized way to request hardware: not just GPUs. Stable in K8s 1.34.
 
+<!--
+DeviceClass groups devices. ResourceClaim is the ticket. ResourceClaimTemplate auto-generates claims per pod. This is how workloads ask for hardware.
+-->
+
 ![ResourceClaim and ResourceClaimTemplate](assets/hami/dra-resource-claim.png)
 
 - **DeviceClass:** groups devices with identical resource models. **ResourceClaim:** a workload's ticket to hardware. **ResourceClaimTemplate:** reusable blueprint, auto-creates a claim per Pod.
@@ -143,6 +173,10 @@ Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU avail
 ## HAMi Capabilities
 
 @subtitle Six things HAMi brings to GPU scheduling
+
+<!--
+Six capabilities. The key ones for this talk: hard isolation, advanced scheduling, and unified monitoring. Heterogeneous management is the differentiator -- not just NVIDIA.
+-->
 
 ::: grid {cols=2}
 ::: card
@@ -185,6 +219,10 @@ Consistent metrics and visibility across vendors.
 ## How HAMi Works
 
 @subtitle Pod creation to GPU isolation
+
+<!--
+Seven stages from pod submission to isolated GPU. The mutating webhook injects the request, the HAMi core library enforces isolation via symbolic hijacking: no kernel modules.
+-->
 
 HAMi intercepts pod creation and GPU allocation through seven stages:
 
@@ -234,6 +272,10 @@ digraph G {
 ## GPU Sharing
 
 @subtitle Dynamic fine-grained device slicing
+
+<!--
+Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
+-->
 
 - **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
 - **Fine-grained:** as small as 1MB device memory, 1% computing cores
@@ -379,6 +421,10 @@ ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, co
 ## Priority Preemption
 
 @subtitle High priority pauses low priority at kernel boundaries
+
+<!--
+HIGH PRIORITY tasks preempt LOW PRIORITY at CUDA kernel boundaries. No wasted compute. The kernel boundary is the key -- you cannot preempt mid-kernel.
+-->
 @hidden
 
 High-priority tasks preempt low-priority ones at CUDA kernel boundaries: no wasted compute, clean context switch:
@@ -442,6 +488,10 @@ ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, co
 
 ## Memory Oversubscription
 @hidden
+
+<!--
+23 GB device + 46 GB virtual = 3x models. GPU memory swapped to host RAM for idle tasks. Works for model loading and inference, not for active training.
+-->
 
 @subtitle 23 GB device + 46 GB virtual = 3x models
 
@@ -1041,6 +1091,10 @@ ax.text(50, 2.5, "e.g. MATLAB - freezes before it ever reaches CUDA", ha="center
 
 @subtitle Online inference, A/B testing, mixed workloads
 
+<!--
+Four scenarios HAMi enables. Key message: GPU sharing is not one-size-fits-all. Online inference saves cost, A/B testing saves hardware, mixed train/infer keeps GPUs busy, LLM optimization fits more models per device.
+-->
+
 ::: grid {cols=2}
 ::: card {tag=green}
 ### {icon:globe cls=accent-primary} Online Inference
@@ -1073,6 +1127,10 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 ## Where We Are Today
 
 @subtitle Community, devices, adopters
+
+<!--
+4.1k stars, 325k pulls, 500+ contributors, 27 countries. 11 device types, 20+ adopters. This is the ecosystem slide -- show the breadth. The QR code links to github.com/Project-HAMi/HAMi.
+-->
 
 #### Open Source, CNCF Backed, Production Ready
 ::: grid {cols=5}
@@ -1116,14 +1174,6 @@ Contributor Countries
 ![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
 :::
-
----
-
-## DRA Feature Timeline
-
-@subtitle KEPs and their development status: we won't cover this today
-
-![DRA Feature Timeline](assets/hami/dra-feature-timeline.png)
 
 ---
 

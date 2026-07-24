@@ -309,7 +309,7 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
 - 1 GB task blocks an 80 GB device
 - Over-provisioning is the default: idle silicon
-- DRA allocates via Structured Parameters, but slicing is MIG-only
+- DRA can request GPUs but can't slice them
 - Why HAMi if DRA slices? We'll get to that
 
 ![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)

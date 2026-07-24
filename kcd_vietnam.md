@@ -1,9 +1,14 @@
 ---
 theme: kcd_vietnam
 title: "From Project to Production: HAMi and Viettel Cloud"
-footer: HAMi - Heterogeneous AI Computing Virtualization Middleware
+footer: HAMi x Viettel Cloud - KCD Vietnam 2026
 paginate: true
 transition: fade
+style: |
+  img[alt="Certified Kubernetes - AI Platform"] { max-height: 56vh; width: auto; display: block; margin: 0 auto 0.4em; }
+  img[alt="badge"] { display: inline-block !important; height: 3em; width: auto; margin: 0 0.5em 0 0 !important; vertical-align: middle; }
+  .slide-body:has(img[alt="Certified Kubernetes - AI Platform"]) { position: relative; }
+  .slide-body:has(img[alt="Certified Kubernetes - AI Platform"]) p:last-child { position: absolute; bottom: 1.2em; left: 13.5em; margin: 0; }
 ---
 
 @variant dark
@@ -11,9 +16,9 @@ transition: fade
 
 # HAMi and Viettel Cloud: From Project to Production
 
-@subtitle Fractional GPU Virtualization for Multi-tenant AI Notebooks
+@subtitle Fractional GPU Virtualization for Multi-tenant AI Workloads
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
-@speaker name="The Anh Nguyen" role="Solutions Engineer, Viettel" github=github.com/ntheanh201
+@speaker name="The Anh Nguyen" role="Software Engineer, Viettel Networks  -  CNCF Kubestronaut" github=github.com/ntheanh201 linkedin=linkedin.com/in/ntheanh201
 
 ---
 
@@ -22,8 +27,7 @@ transition: fade
 @subtitle Problem, solution, production case study
 
 - **GPU Sharing Mechanics:** How DRA and HAMi interact with the Kubernetes scheduler, and where the abstraction breaks down
-- **Production Blueprint:** Viettel Cloud's deployment of AI Notebooks with fractional GPUs, including isolation techniques and real utilization numbers
-- **Problem → Solution → Implementation:** The full pipeline from identifying GPU underutilization to deploying a production vGPU platform at telco scale
+- **Blueprint:** How Viettel Cloud runs fractional GPUs in production - across notebooks, inference and training - with the isolation limits and the real utilization numbers we measured
 
 ---
 
@@ -37,7 +41,7 @@ transition: fade
 
 @subtitle Atomic GPU allocation wastes silicon
 
-Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low utilization in multi-tenant AI Notebooks. DRA and HAMi's vGPU virtualization solve this, but only if implemented correctly.
+Kubernetes treats GPUs as atomic resources, forcing over-provisioning and low utilization across multi-tenant AI workloads - notebooks, inference and training alike. DRA and HAMi's vGPU virtualization solve this, but only if implemented correctly.
 
 - GPUs are **allocated whole**: a 1GB inference task blocks an entire 80GB device
 - **Over-provisioning** is the default: request peak, burn budget, idle silicon
@@ -466,60 +470,409 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 
 # Part 3: Viettel Cloud
 
-@subtitle Production deployment of fractional GPUs for AI Notebooks at telco scale
+@subtitle What we measured, what broke, and what we learned
 
 ---
 
-## Viettel Cloud: AI Notebooks
+## Who We Are
 
-@subtitle Multi-tenant data science at telco scale
+@subtitle Viettel Cloud, the AI Platform, and the GPU-sharing slice we'll cover
 
-Multi-tenant data science platform serving hundreds of users:
+::: grid {cols=2}
+::: card {tag=cyan}
+### The Anh Nguyen
 
-- **Before HAMi:** 1 GPU per notebook: 30% average utilization, long queue times
-- **With HAMi:** fractional vGPUs, multiple notebooks per physical GPU
-- **Workload mix:** Jupyter notebooks, model training, batch inference, RAG pipelines
-- **Scale:** telco-grade infrastructure, 24/7 SLA requirements
+Software Engineer, Viettel Networks
 
----
+- Technical lead, **Viettel AI / GPU Platform**
+- **CNCF Kubestronaut**
+- **NVIDIA Certified Professional**, AI Ops
+- **CNCF Glossary** VN Lead, **SIG Docs VI** approver
+- **Kubernetes & HAMi** member
+:::
+::: card {tag=green}
+### Viettel Cloud
 
-## Deployment Architecture
+Cloud platform of Viettel Group, Vietnam's largest telco.
 
-@subtitle Helm, DRA, Prometheus, node problem detector
-
-- HAMi scheduler + device plugin deployed via Helm on Viettel Kubernetes clusters
-- DRA resource claims structured per-namespace, per-user quota enforced at scheduler level
-- Prometheus + Grafana dashboards: per-tenant GPU utilization, memory pressure, preemption events
-- Node problem detector + HAMi health checks for GPU fault detection
-
----
-
-## Production Bottlenecks
-
-@subtitle What breaks between test and prod
-
-Moving from test to production at scale:
-
-- **Cold start latency:** container images + CUDA context init: mitigated via pre-warmed node pools
-- **Memory fragmentation:** small vGPUs leave unusable gaps: binpack scheduling active by default
-- **Noisy neighbor:** compute-bound tasks starve latency-sensitive inference: priority + preemption
-- **Driver compatibility:** NVIDIA driver minimum 440, CUDA >= 10.2: enforced at admission
-- **Monitoring gaps:** GPU telemetry at vGPU granularity required custom Prometheus exporters
+- **Viettel Cloud AI-Native** - the AI / GPU platform
+- **AI Notebooks with fractional GPU** - dev & training
+- Also **inference serving**
+- **H200** pool (141 GB), plus **L40, L40S, A30, A6000, ...**
+:::
+:::
 
 ---
 
-## Observability
+## Certified Kubernetes AI Platform
 
-@subtitle Grafana + Prometheus, per-tenant visibility
+@subtitle 31 platforms in the world have it. We are one.
 
-HAMi provides built-in monitoring dashboards (Grafana + Prometheus):
+![Certified Kubernetes - AI Platform](assets/kcd_vietnam/certified-k8s-ai-platform.png)
 
-- **K8s scheduling dimension:** vGPU task bindings, task-to-GPU relationships
-- **GPU device dimension:** real computing power and memory usage during runtime
-- Community best-practice monitoring dashboard included
+![badge](assets/kcd_vietnam/ai-conformance-badge.png) Our **AI Platform** - **first & only in Vietnam**, #**20** worldwide.
 
 ---
 
+## What We Run Today
+
+@subtitle HAMi in our clusters
+
+- {icon:server cls=accent-primary} **HAMi v2.9** on **both clusters**: the H200 pool, and the mixed-GPU one
+- {icon:users cls=accent-primary} Our own engineers use it every day
+- {icon:lock cls=accent-primary} The memory limit is real: pod sees **2 GB, not 141 GB**
+- {icon:git-branch cls=accent-primary} Lives next to **Slinky, Inference, KEDA**
+- {icon:chart-bar cls=accent-primary} Full monitoring, down to **per-pod GPU metrics**
+
+This is all a user writes:
+
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 2000   # MB - a hard limit
+    nvidia.com/gpucores: 30   # % - best effort
+```
+
+Our researchers do not write that - they pick the GPU size in our **AI Notebooks**, built on **Kubeflow Notebooks**.
+
+Numbers in this talk: mostly the **H200 pool**, a few from **L40**.
+
+---
+
+## The Problem We Measured
+
+@subtitle Asking for a GPU is not the same as using it
+
+Two real jobs. Each one held **a whole H200, 141 GB**:
+
+```seaborn
+import matplotlib.pyplot as plt
+
+FG, DIM = "#3a2020", "#7a6a5a"
+RED, YELLOW, GREY = "#e61e24", "#f4a93a", "#e0e0df"
+
+fig, ax = plt.subplots(figsize=(10.5, 3.0))
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+ax.text(-40, 1.75, "GPU MEMORY  -  ALLOCATED VS USED", fontsize=10.5, color=DIM, family="monospace")
+
+ax.barh(1, 141, color=GREY, height=0.5)
+ax.barh(1, 1, color=RED, height=0.5)
+ax.barh(0, 141, color=GREY, height=0.5)
+ax.barh(0, 39, color=YELLOW, height=0.5)
+
+ax.text(-4, 1, "Time-series\n(inference)", ha="right", va="center", fontsize=12.5, color=FG, fontweight="bold", linespacing=1.4)
+ax.text(-4, 0, "Defect detection\n(training)", ha="right", va="center", fontsize=12.5, color=FG, fontweight="bold", linespacing=1.4)
+
+ax.text(6, 1, "1 GB used  -  SM 16-18%", ha="left", va="center", fontsize=12, color=FG)
+ax.text(44, 0, "39 GB used", ha="left", va="center", fontsize=12, color=FG)
+
+ax.text(141, 1.42, "one whole H200 = 141 GB", ha="right", va="bottom", fontsize=11, color=DIM)
+
+ax.annotate("", xy=(139, -0.55), xytext=(41, -0.55),
+            arrowprops=dict(arrowstyle="<->", color=DIM, linewidth=1.4))
+ax.text(90, -0.74, "100 GB free  →  inference  -  notebooks  -  CV / embedding",
+        ha="center", va="top", fontsize=11, color=FG, fontweight="bold")
+
+ax.set_xlim(-40, 148)
+ax.set_ylim(-1.15, 1.95)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+```
+
+- The time-series job leaves **140 GB and 80% of the GPU** doing nothing
+- Detection training took **39 GB** - it still left most of the card unused
+- **Many of our GPUs have no MIG:** L40, L40S, A6000, ...
+
+> Kubernetes gives you one choice: `nvidia.com/gpu: 1`. The whole card, or nothing.
+
+---
+
+## The Result: 3.4x More Work Per GPU
+
+@subtitle Fix the SLA, scale replicas, fill the empty GPU
+
+```seaborn
+import matplotlib.pyplot as plt
+
+FG, DIM = "#3a2020", "#7a6a5a"
+RED, GREEN, GREY = "#e61e24", "#39ae4a", "#e0e0df"
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.5, 3.0),
+                               gridspec_kw={"width_ratios": [1.3, 1], "wspace": 0.32})
+fig.patch.set_alpha(0)
+for ax in (ax1, ax2):
+    ax.set_facecolor("none")
+    ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
+    ax.set_xticks([])
+
+# ---- left: throughput, labels to the LEFT so nothing overlaps the line ----
+ax1.text(-42, 2.9, "REQ/S PER CARD  @  P95 160 MS", fontsize=10.5, color=DIM, family="monospace")
+for y, v, n, c in [(2, 20.7, "Native", GREY), (0, 71.1, "HAMi + KEDA", RED)]:
+    ax1.barh(y, v, color=c, height=0.62)
+    ax1.text(-3, y, n, ha="right", va="center", fontsize=12, color=FG, fontweight="bold")
+    ax1.text(v + 3, y, str(v), ha="left", va="center", fontsize=12.5, color=FG, fontweight="bold")
+ax1.plot([20.7, 20.7], [-0.5, 2.5], color=DIM, linewidth=1.2, linestyle=(0, (4, 3)))
+ax1.text(20.7, 2.55, "one whole GPU", ha="center", va="bottom", fontsize=10.5, color=DIM)
+ax1.text(-3, -0.55, "3.4x per card", ha="right", va="center", fontsize=11.5, color=RED, fontweight="bold")
+ax1.set_xlim(-42, 100)
+ax1.set_ylim(-0.9, 3.1)
+
+# ---- right: SM utilization ----
+ax2.text(-0.15, 128, "SM UTILIZATION VS REPLICAS", fontsize=10.5, color=DIM, family="monospace")
+xs, vals = [0, 1, 2, 3], [18, 31, 54, 100]
+ax2.plot(xs, vals, color=RED, linewidth=2.2, zorder=2)
+for x, v, c, r in zip(xs, vals, [GREY, RED, RED, GREEN], [7, 5.5, 5.5, 9]):
+    ax2.plot(x, v, "o", markersize=r, color=c, markeredgecolor="white", markeredgewidth=1.3, zorder=3)
+    ax2.text(x, v + 8, f"{v}%", ha="center", fontsize=11.5, color=FG, fontweight="bold")
+for x, lab in zip(xs, ["1", "2", "5", "10 replica"]):
+    ax2.text(x, -13, lab, ha="center", fontsize=12, color=DIM)
+ax2.set_xlim(-0.35, 3.4)
+ax2.set_ylim(-22, 140)
+```
+
+One pod uses only **18% of the card**. Pack **10 replicas** on it and the GPU hits **100%** - same latency.
+
+- **HAMi does not make one pod faster** - it fills the GPU that was sitting empty
+- Bigger batches did not help either: **32 to 512**, GPU still 7-10%
+- Same 71 req/s (H200): **1 GPU instead of 3.4** → **~71% fewer cards**, **~51% less power**, **~$7k/month** at an example $4/GPU-h
+
+---
+
+## One Card, One Day
+
+@subtitle One slice guaranteed, on purpose - and what it costs
+
+**Workload:** an AI Notebook training YOLO11 - ~17k images, batch 64 → **39 GB** used. Batch is sized for **accuracy**, not to fill the card - so the spare **~100 GB is genuinely free**, not just idle. We fence **~30%** and cap the notebook to **70% of the cores**.
+
+```seaborn
+import matplotlib.pyplot as plt
+
+FG, DIM = "#3a2020", "#7a6a5a"
+RED, GREY = "#e61e24", "#eceae8"
+
+fig, ax = plt.subplots(figsize=(5.2, 2.85))
+fig.patch.set_alpha(0)
+ax.set_facecolor("none")
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+
+ax.text(-0.55, 104, "PRICE OF CAPPING", fontsize=11.5, color=DIM, family="monospace")
+ax.plot([-0.5, 1.55], [60, 60], color=DIM, linewidth=1.2, linestyle=(0, (4, 3)), zorder=3)
+ax.bar(0, 60, width=0.5, color=GREY, zorder=2)
+ax.bar(1, 80, width=0.5, color=RED, zorder=2)
+ax.text(0, 63, "1h00", ha="center", va="bottom", fontsize=15, color=FG, fontweight="bold")
+ax.text(1, 83, "1h20", ha="center", va="bottom", fontsize=15, color=FG, fontweight="bold")
+ax.text(1.34, 70, "+20 min", ha="left", va="center", fontsize=13, color=RED, fontweight="bold")
+ax.text(0, -8, "full", ha="center", va="top", fontsize=12, color=DIM)
+ax.text(1, -8, "70% cores", ha="center", va="top", fontsize=12, color=DIM)
+ax.set_xlim(-0.8, 2.5)
+ax.set_ylim(-20, 112)
+```
+
+- {icon:lock cls=accent-primary} **Memory is fenced.** The notebook sees only its own slice - it cannot OOM the neighbours
+- {icon:gauge cls=accent-primary} **Cores are capped** with `force` - the freed share is **reserved**, not "maybe"
+- {icon:refresh-cw cls=accent-contrast} **The price:** ~20 minutes, on purpose - *a small model; a big one costs much more*
+
+---
+
+## The Rest Follows The Load
+
+@subtitle One notebook fixed all day - inference flexes by the hour
+
+```seaborn
+import matplotlib.pyplot as plt
+
+FG, DIM = "#3a2020", "#7a6a5a"
+BLUE, BLUEL, RED, YELLOW, GREY = "#28a4db", "#8fcdec", "#e61e24", "#f4a93a", "#eceae8"
+
+fig, ax = plt.subplots(figsize=(11, 3.35))
+fig.patch.set_alpha(0)
+ax.set_facecolor("none")
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+
+ax.text(-26, 2.86, "ONE H200 ACROSS ONE DAY", fontsize=11.5, color=DIM, family="monospace")
+rows = [
+    (2, "Morning", [(30, BLUE, "Notebook ~30%"), (50, RED, "Time-series  ×6"), (20, GREY, "")]),
+    (1, "Office hours", [(30, BLUE, "Notebook ~30%"), (8, RED, "×1"), (42, YELLOW, "LLM inference  ×5"), (20, GREY, "")]),
+    (0, "Night", [(30, BLUE, "Notebook ~30%"), (42, BLUEL, "more training"), (8, RED, "×1"), (20, GREY, "")]),
+]
+for y, label, segs in rows:
+    left = 0
+    for w, c, txt in segs:
+        ax.barh(y, w, left=left, color=c, height=0.62, edgecolor="white", linewidth=1.8)
+        if txt:
+            ax.text(left + w / 2, y, txt, ha="center", va="center", fontsize=10.5,
+                    color="#161616" if c in (YELLOW, BLUEL) else "white", fontweight="bold")
+        left += w
+    ax.text(-3, y, label, ha="right", va="center", fontsize=13, color=FG, fontweight="bold")
+ax.text(100, 2.7, "card full", ha="right", va="bottom", fontsize=10, color=DIM)
+ax.plot([100, 100], [-0.4, 2.58], color=DIM, linewidth=1.0, linestyle=(0, (2, 3)), zorder=1)
+ax.set_xlim(-26, 106)
+ax.set_ylim(-0.6, 3.2)
+```
+
+- {icon:lock cls=accent-primary} **The notebook never moves.** Its slice is fixed all day → training stays stable and guaranteed
+- {icon:refresh-cw cls=accent-contrast} **KEDA hands the freed space off through the day.** The morning **burst fades** → cores go to **LLM <20B** → one time-series instance stays for scattered load → at night, spare **auto-scales more notebooks** for extra overnight training. *Never idle.*
+
+---
+
+@hidden
+## Stable While Shared
+
+@subtitle Does sharing make training jittery? We measured it
+
+The card is now *truly* shared - the notebook trains while **bursty inference** flexes beside it. Does that shake the training? We measured epoch-time **CV** - standard deviation ÷ mean, lower is steadier.
+
+```seaborn
+import matplotlib.pyplot as plt
+
+FG, DIM = "#3a2020", "#7a6a5a"
+RED, GREEN = "#e61e24", "#39ae4a"
+
+fig, ax = plt.subplots(figsize=(5.6, 2.95))
+fig.patch.set_alpha(0)
+ax.set_facecolor("none")
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+
+ax.text(-0.55, 23.2, "EPOCH-TIME JITTER  (CV, LOWER = STEADIER)", fontsize=10, color=DIM, family="monospace")
+bars = [(0, 1, GREEN, "alone"), (1, 19, RED, "shared, no cap"), (2, 9, GREEN, "shared, capped")]
+for x, v, c, lab in bars:
+    ax.bar(x, v, width=0.56, color=c, zorder=2)
+    ax.text(x, v + 0.8, f"{v}%", ha="center", va="bottom", fontsize=15, color=FG, fontweight="bold")
+    ax.text(x, -1.4, lab, ha="center", va="top", fontsize=11.5, color=DIM)
+ax.annotate("", xy=(1.82, 10.2), xytext=(1.18, 17.6),
+            arrowprops=dict(arrowstyle="->", color=FG, linewidth=1.7, connectionstyle="arc3,rad=-0.32"))
+ax.text(2.02, 15.0, "cap halves it", ha="center", va="center", fontsize=10.5, color=FG, fontweight="bold")
+ax.set_xlim(-0.65, 2.7)
+ax.set_ylim(-4, 24.5)
+```
+
+- {icon:check cls=accent-primary} **Alone, nothing contends:** CV ~**1%** - rock-steady epochs
+- {icon:triangle-alert cls=accent-secondary} **Shared with bursty inference, no cap:** CV jumps to **19%** - jittery, hard to predict
+- {icon:gauge cls=accent-primary} **Cap the neighbours (`force`):** CV back to **9%** - steady again, same shared card
+
+> **Honest caveat:** cap isolates *stability*, not *throughput* - for hard throughput isolation, use **MIG**.
+
+---
+
+## But It Does Not Always Help
+
+@subtitle HAMi fills the *empty* part of a card - a full one has nothing to give
+
+::: grid {cols=2}
+::: card {tag=green}
+### {icon:check cls=accent-primary} It helps when the card is empty
+
+**Inference:** one pod = **~18% SM**, card **82% idle**.
+
+- Pack ~10 → SM hits **100%** → **3.4x more work**
+:::
+::: card {tag=red}
+### {icon:x cls=accent-secondary} Not when it is already full
+
+**Training / big LLM:** one instance **already saturates** the card.
+
+- Big LLM: one **11.6k** tok/s **>** four small **7.3k**
+- Same training job **× 4**: **0.77x** - packing *loses*
+:::
+:::
+
+**Careful what you promise your users:**
+
+| What you ask for | What you get |
+|---|---|
+| `gpumem` - memory | **A real limit.** Your neighbour is safe |
+| `gpucores`, default | **Only a hint.** 10% and 90% ran the same speed |
+| `gpucores`, **`force`** | **A real cap.** 70% cores → run takes 1h20, not 1h |
+
+---
+
+## What It Really Took
+
+@subtitle The hard part is not installing HAMi
+
+| What surprised us | What we did |
+|---|---|
+| **Kyverno** blocks HAMi's device plugin - needs **privileged + hostPath** | Exclude `hami-system` from the **pod-security** policies |
+| GPU Operator **also registers** `nvidia.com/gpu` - clashes with HAMi | Operator device plugin off, CDI off |
+| Fractional, full-GPU, Slurm (Slinky) **all want the same nodes** | Own pool, own scheduler, and a taint |
+| HAMi 2.9 **renamed all metrics** - dashboards empty | Use `hami_*`. We fixed the docs upstream |
+
+**Remember this: it is an operations project, not a one-line install.**
+
+---
+
+## Where The Magic Breaks
+
+@subtitle Useful to know before you debug for two days
+
+HAMi sits in front of every CUDA call. **Go around CUDA, and HAMi cannot see you.**
+
+```seaborn
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+
+FG, DIM = "#3a2020", "#7a6a5a"
+GREEN, RED = "#39ae4a", "#e61e24"
+
+fig, ax = plt.subplots(figsize=(10.5, 2.6))
+fig.patch.set_alpha(0)
+ax.set_facecolor("none")
+ax.set_xlim(0, 100)
+ax.set_ylim(-1, 44)
+ax.axis("off")
+
+def box(x, w, text, fc, ec, tc, fs=12.5):
+    y, h = 25, 12
+    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.4,rounding_size=2",
+                                linewidth=1.8, edgecolor=ec, facecolor=fc, zorder=3))
+    ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fs,
+            color=tc, fontweight="bold", zorder=4, linespacing=1.3)
+
+box(3, 22, "App / framework", "#ffffff", DIM, FG)
+box(40, 26, "HAMi libvgpu\n(intercept)", "#e6f5e9", GREEN, "#1f5b2b")
+box(82, 15, "GPU", "#ffffff", DIM, FG)
+
+ax.annotate("", xy=(39.5, 31), xytext=(25.5, 31), arrowprops=dict(arrowstyle="-|>", color=GREEN, lw=2.3, mutation_scale=16))
+ax.annotate("", xy=(81.5, 31), xytext=(66.5, 31), arrowprops=dict(arrowstyle="-|>", color=GREEN, lw=2.3, mutation_scale=16))
+ax.text(32.5, 34.2, "CUDA", ha="center", fontsize=10, color=DIM, family="monospace")
+ax.text(50, 41.5, "through CUDA  →  HAMi caps & fences it", ha="center", fontsize=11.5, color="#1f5b2b", fontweight="bold")
+
+byp = FancyArrowPatch((13, 24.5), (89, 24.5), connectionstyle="arc3,rad=0.15",
+                      arrowstyle="-|>", mutation_scale=18, lw=2.1, color=RED, linestyle=(0, (5, 3)), zorder=2)
+ax.add_patch(byp)
+ax.text(50, 7.5, "around CUDA  →  HAMi is blind", ha="center", fontsize=11.5, color=RED, fontweight="bold")
+ax.text(50, 2.5, "e.g. MATLAB - freezes before it ever reaches CUDA", ha="center", fontsize=9.5, color=DIM)
+```
+
+- {icon:package cls=accent-secondary} **Alpine / musl images crash.** libvgpu - HAMi's `LD_PRELOAD` interposer - needs **glibc**; on Alpine/busybox it can't find `libdl.so.2` (exit **127**). Use a glibc CUDA image - Debian or Ubuntu
+- {icon:x cls=accent-secondary} **Runtimes that skip CUDA hang.** MATLAB freezes *before* it ever reaches a CUDA call
+- {icon:check cls=accent-primary} **What does *not* break:** even multi-GPU - P2P, all-reduce, tensor parallel + CUDA graphs on NCCL 2.28 - all stays inside CUDA
+
+---
+
+## What Is Next For Us
+
+@subtitle From one pool to a real service
+
+- {icon:users cls=accent-primary} **More teams** inside Viettel, with quota per team
+- {icon:server cls=accent-primary} **More pools** - the H200 and mixed-GPU pools today, the rest of the fleet next
+- {icon:gauge cls=accent-contrast} **More workload types** on the same card - agents, bigger LLMs, batch jobs
+- {icon:git-compare-arrows cls=accent-contrast} **Move to DRA** - keep the same isolation, swap the custom API for the standard Kubernetes one
+
+---
+
+@hidden
 ## Applicable Scenarios
 
 @subtitle Online inference, A/B testing, mixed workloads
@@ -658,4 +1011,4 @@ Community edition is free and open-source. Enterprise edition available with add
 # Questions?
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
-@speaker name="Anh Nguyen" role="Solutions Engineer, Viettel"
+@speaker name="The Anh Nguyen" role="Software Engineer, Viettel Networks  -  CNCF Kubestronaut" github=github.com/ntheanh201 linkedin=linkedin.com/in/ntheanh201

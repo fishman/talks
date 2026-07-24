@@ -253,6 +253,10 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 
 @subtitle Binpack & Spread
 
+<!--
+Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency.
+-->
+
 ![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
 
 - **Node Binpack:** packs tasks onto fewer nodes to reduce fragmentation and free entire machines
@@ -267,6 +271,10 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 
 @subtitle Topology-Aware
 
+<!--
+NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs.
+-->
+
 ![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
 - **NVLink 3 (A100):** 600 GB/s, 12 links
@@ -274,7 +282,7 @@ Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  
 - **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
 - **NVLink 6 (Rubin):** ~3.6 TB/s target
 - **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
-- **HAMi topology policy:** prefers NVLink-connected devices, avoids PCIe bridge pairs
+- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
 
 ---
 

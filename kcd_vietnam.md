@@ -143,7 +143,7 @@ Backup slide. Shows all DRA KEPs and their dev status. Mention that DRA is movin
 @subtitle Per-node device inventory
 
 <!--
-DRA drivers run on each node and publish what is available. The scheduler reads this. Think of it as a menu of devices.
+DRA drivers run on each node and publish available devices. The scheduler reads ResourceSlices to find nodes that can satisfy a claim. This is how the scheduler knows what hardware is free.
 -->
 
 ![ResourceSlice](assets/hami/dra-resource-slice.png)
@@ -161,7 +161,7 @@ DRA drivers run on each node and publish what is available. The scheduler reads 
 @subtitle A standardized way to request hardware: not just GPUs. Stable in K8s 1.34.
 
 <!--
-DeviceClass groups devices. ResourceClaim is the ticket. ResourceClaimTemplate auto-generates claims per pod. This is how workloads ask for hardware.
+DeviceClass defines a category of devices by capability. ResourceClaim requests specific hardware from that category. ResourceClaimTemplate creates a claim per pod automatically. Together these replace the old device plugin model.
 -->
 
 ![ResourceClaim and ResourceClaimTemplate](assets/hami/dra-resource-claim.png)
@@ -536,6 +536,10 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 
 @subtitle Binpack & Spread
 
+<!--
+Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency. Pick based on workload: training wants binpack, inference with SLOs wants spread.
+-->
+
 ![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
 
 - **Node binpack** frees whole machines: reduces cost, helps cluster autoscaler
@@ -552,6 +556,10 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 
 @subtitle Topology-Aware
 
+<!--
+NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs. Ascend uses HCCS, other vendors have their own high-speed interconnects: same topology logic applies. This matters for tensor parallelism and large-model training.
+-->
+
 ![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
 - **NVLink 3 (A100):** 600 GB/s, 12 links
@@ -559,7 +567,7 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 - **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
 - **NVLink 6 (Rubin):** ~3.6 TB/s target
 - **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
-- **HAMi topology policy:** prefers NVLink-connected devices, avoids PCIe bridge pairs
+- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
 
 ---
 
@@ -568,6 +576,10 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 ## GPU Sharing Approaches
 
 @subtitle MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+
+<!--
+Common question: why not just use MIG? MIG doesn't work on all devices. You need to manually load MIG templates. HAMi does it automatically based on workload choice. NVIDIA's DRA driver has limited slicing. DRA itself still lacks advanced scheduling.
+-->
 
 | Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
 |------------|:---:|:---:|:---:|:---:|

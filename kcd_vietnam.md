@@ -71,20 +71,14 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
 ---
 
-# Part 2: The Solution
-
-@subtitle Fractional GPU allocation and scheduling
-
----
-
 @layout compare
 
 ## The GPU Challenge
 
-@subtitle What breaks, what HAMi fixes
+@subtitle What breaks, what we need
 
 ::: card {tag=compare}
-### Without HAMi
+### Problem
 
 - GPUs are scarce, allocated whole
 - Vendors locked in, supply tight
@@ -99,7 +93,7 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 :::
 
 ::: card {tag=compare}
-### With HAMi
+### Requirements
 
 - Hardware agnostic: one API, any accelerator
 - Fractional GPU: 1MB slices, multiple tasks per device
@@ -109,6 +103,12 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 ::: notes{ tag="green" }
 Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
 :::
+
+---
+
+# Part 2: The Solution
+
+@subtitle Fractional GPU allocation and scheduling
 
 ---
 
@@ -1088,6 +1088,14 @@ Contributor Countries
 ![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
 :::
+
+---
+
+## DRA Feature Timeline
+
+@subtitle KEPs and their development status: we won't cover this today
+
+![DRA Feature Timeline](assets/hami/dra-feature-timeline.png)
 
 ---
 

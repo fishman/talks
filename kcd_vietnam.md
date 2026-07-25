@@ -22,19 +22,6 @@ style: |
 
 ---
 
-## What You'll Learn
-
-@subtitle Problem, solution, production case study
-
-<!--
-Two things they will walk away with: how GPU sharing actually works under the hood, and a real production deployment story.
--->
-
-- **GPU Sharing:** How DRA + HAMi interact with the scheduler, and where abstractions break
-- **Blueprint:** Viettel Cloud's fractional GPU production stack: notebooks, inference, training: with real isolation limits and utilization data
-
----
-
 # Part 1: The Problem
 
 @subtitle GPU underutilization, atomic allocation, multi-tenant contention

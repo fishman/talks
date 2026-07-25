@@ -1135,6 +1135,42 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 
 ---
 
+@layout metrics
+## HAMi in Production
+
+@subtitle Across adopters: ops, utilization, density
+
+<!--
+These numbers come from CNCF case studies. We have 7 published, more in the pipeline. If you are running HAMi in production, reach out: we will help you write and submit it to the CNCF.
+-->
+
+::: grid {cols=4}
+::: card {metric}
+3x
+GPU density
+:::
+::: card {metric}
+10x
+Workloads per device
+:::
+::: card {metric}
+80%
+Less ops overhead
+:::
+::: card {metric}
+2x
+GPU utilization
+:::
+:::
+
+@row
+
+::: notes{ tag="green" }
+7 CNCF case studies, more coming. [cncf.io/case-studies](https://www.cncf.io/case-studies/) · Reach out if you want help submitting yours.
+:::
+
+---
+
 @layout ecosystem
 ## Where We Are Today
 
@@ -1190,7 +1226,7 @@ Contributor Countries
 ---
 
 @kicker Thank You
-@side-image assets/ecosystem/github-qr.png
+@side-image assets/kcd_vietnam/qr-code.png
 # Questions?
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh linkedin=linkedin.com/in/rezajelveh

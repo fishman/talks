@@ -1098,6 +1098,12 @@ ax.text(50, 2.5, "e.g. MATLAB - freezes before it ever reaches CUDA", ha="center
 
 ---
 
+# Part 4: Where We Are Today
+
+@subtitle Adoption, Case Studies, Community 
+
+---
+
 @hidden
 ## Applicable Scenarios
 
@@ -1136,13 +1142,9 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 ---
 
 @layout metrics
-## HAMi in Production
+## Where We Are Today
 
-@subtitle Across adopters: ops, utilization, density
-
-<!--
-These numbers come from CNCF case studies. We have 7 published, more in the pipeline. If you are running HAMi in production, reach out: we will help you write and submit it to the CNCF.
--->
+@subtitle HAMi in Production: 7 case studies, more coming
 
 ::: grid {cols=4}
 ::: card {metric}
@@ -1166,15 +1168,15 @@ GPU utilization
 @row
 
 ::: notes{ tag="green" }
-7 CNCF case studies, more coming. [cncf.io/case-studies](https://www.cncf.io/case-studies/) · Reach out if you want help submitting yours.
+China Merchants Bank · SNOW Corp. · NIO · KE Holdings · DaoCloud · SF Technology · Prep Education · [cncf.io/case-studies](https://www.cncf.io/case-studies/) · Reach out for help submitting yours.
 :::
 
 ---
 
 @layout ecosystem
-## Where We Are Today
+## Community & Adopters
 
-@subtitle Community, devices, adopters
+@subtitle Devices, integrations, and who uses HAMi
 
 <!--
 4.1k stars, 325k pulls, 500+ contributors, 27 countries. 11 device types, 20+ adopters. This is the ecosystem slide -- show the breadth. The QR code links to github.com/Project-HAMi/HAMi.

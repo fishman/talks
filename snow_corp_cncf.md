@@ -14,8 +14,8 @@ paginate: true
 
 @subtitle A Production Blueprint for 1000+ GPUs
 
-@speaker name="Jeonghyun Kim" role="AI Engineer, SNOW Corp."
-@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
+@speaker name="Jeonghyun Kim" role="AI Engineer, SNOW Corp." github=github.com/jeonghyunkeem linkedin=linkedin.com/in/jeonghyun-kim-2399a6203
+@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh linkedin=linkedin.com/in/rezajelveh
 
 ---
 
@@ -49,259 +49,7 @@ SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users acro
 
 ---
 
-# PART 1  -  Introduction
-
-@subtitle GPU Sharing, Scheduling & DRA
-
----
----
-
-## What is HAMi
-
-@subtitle Static allocation, one GPU per task
-
-![Before HAMi](assets/hami_intro/before-hami.png)
-
----
-
-## What is HAMi
-
-@subtitle Fractional vGPUs, multiple tasks per device
-
-![After HAMi](assets/hami_intro/after-hami.png)
-
----
-
-## Device Plugin vs DRA
-
-@subtitle Why DRA matters for GPU scheduling
-
-@layout compare
-
-::: card {tag=compare}
-### Device Plugin
-
-- Pod requests `nvidia.com/gpu`
-- Fixed allocation at pod creation
-- No sharing between pods
-- Vendor-specific APIs only
-- No scheduling policies
-:::
-
-::: arrow
-
-{icon:arrow-right cls=accent-primary size=48}
-:::
-
-::: card {tag=compare}
-### Dynamic Resource Allocation
-
-- Flexible resource claiming via structured params
-- Vendor-neutral interface
-- Dynamic allocation at runtime
-- K8s 1.32 beta, 1.34 GA
-- No GPU sharing built-in
-:::
-
----
-
-## HAMi Capabilities
-
-@subtitle Six things HAMi brings to GPU scheduling
-
-::: grid {cols=2}
-::: card
-### {icon:layers cls=accent-primary} Heterogeneous Management
-
-Manage and schedule GPU, NPU, MLU, and other accelerators in one workflow.
-:::
-::: card
-### {icon:shield-check cls=accent-primary} Hard Isolation
-
-Slice memory and compute precisely with hard isolation at runtime.
-:::
-::: card
-### {icon:git-branch cls=accent-contrast} Advanced Scheduling
-
-Use binpack, spread, and topology-aware policies for better placement.
-:::
-::: card
-### {icon:box cls=accent-primary} Kubernetes Native
-
-Work with Kubernetes APIs, DRA, and CDI for easier adoption.
-:::
-::: card
-### {icon:gauge cls=accent-primary} Resource Isolation & QoS
-
-Control memory and core quotas for fairer and more stable sharing.
-:::
-::: card
-### {icon:chart-bar cls=accent-contrast} Unified Monitoring
-
-Provide consistent metrics and visibility across device vendors.
-:::
-:::
-
----
-
-## GPU Sharing
-
-@subtitle Dynamic fine-grained device slicing
-
-- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
-- **Fine-grained:** as small as 1MB device memory, 1% computing cores
-- **Transparent to tasks:** no code changes required
-- **Hard resource isolation** inside containers
-
-One API across vendors: same YAML, any accelerator.
-
----
-
-## How GPU Sharing Works
-
-@subtitle Symbolic hijacking inside containers
-
-HAMi-Core uses **symbolic hijacking** inside containers:
-
-| Requirement | Specification |
-|-------------|---------------|
-| NVIDIA driver | >= 440 |
-| CUDA | >= 10.2 |
-| Device Memory isolation | Yes |
-| Core utilization limit | Yes |
-| Fault isolation | Yes |
-| Transparent to GPU tasks | Yes |
-
----
-
-## HAMi vs Other Projects
-
-@subtitle Feature comparison across solutions
-
-| Feature | HAMi | NVIDIA device-plugin | NVIDIA DRA driver |
-|---------|:---:|:---:|:---:|
-| Multi-vendor GPUs | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| GPU sharing | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Flexible scheduling | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Dynamic MIG | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Memory oversubscription | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Topology-aware | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-| Heterogeneous devices | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-
----
-
-## GPU Sharing Approaches
-
-@subtitle MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
-
-| Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
-|------------|:---:|:---:|:---:|:---:|
-| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Symbolic hijacking (1MB slice) | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
-
-MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
-
----
-
-## HAMi + DRA: The Full Picture
-
-@subtitle Where each approach fits
-
-| Capability | Device Plugin | DRA | HAMi | HAMi + DRA |
-|------------|:---:|:---:|:---:|:---:|
-| GPU sharing | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Vendor-neutral | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Structured params | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} |
-| Dynamic allocation | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} |
-| Zero code changes | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Binpack / Spread | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Topology-aware | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-
-> DRA (beta in K8s 1.32, GA in 1.34) adds vendor-neutral structured parameters and dynamic allocation. HAMi fills the gaps: GPU sharing, binpack/spread, topology-aware scheduling, and zero-code migration  -  all production-hardened.
-
----
-
-## HAMi Architecture
-
-@subtitle Scheduler, device plugin, vGPU abstraction
-
-- {icon:git-branch cls=accent-primary} **HAMi scheduler** extends kube-scheduler
-- {icon:hard-drive cls=accent-secondary} **Device plugin** reports virtualized GPU capacity
-- {icon:layers cls=accent-contrast} **vGPU abstraction** maps physical → virtual devices
-- {icon:shield-check cls=accent-primary} **Transparent to workloads**  -  no code changes
-
-Integrates with KEDA (autoscaling), Helm (deployment), Prometheus (monitoring)  -  all CNCF ecosystem.
-
----
-
-@layout image-right
-
-## GPU Sharing Architecture
-
-@subtitle How components connect
-
-![HAMi GPU Sharing](assets/dra/10000000000007D00000045C4E7A6399.png)
-
----
-
-@layout image-right
-
-## Scheduling Policies
-
-@subtitle Binpack & Spread
-
-<!--
-Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency.
--->
-
-![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
-
-- **Node Binpack:** packs tasks onto fewer nodes to reduce fragmentation and free entire machines
-- **GPU Spread:** distributes workloads across available GPUs for maximum parallelism
-- **When it matters:** mixed small/large workloads on shared clusters -- binpack consolidates, spread balances burst traffic
-
----
-
-@layout image-right
-
-## Scheduling Policies
-
-@subtitle Topology-Aware
-
-<!--
-NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs.
--->
-
-![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
-
-- **NVLink 3 (A100):** 600 GB/s, 12 links
-- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
-- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
-- **NVLink 6 (Rubin):** ~3.6 TB/s target
-- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
-- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
-
----
-
-## GPU Sharing Methods Compared
-
-@subtitle vGPU vs CUDA streams vs MPS vs MIG
-
-| Method | Multi-vendor | Isolation | Fragmentation | Overhead |
-|--------|:---:|:---:|:---:|:---:|
-| HAMi vGPU | {icon:check cls=accent-primary} | Strong | Low | Low |
-| CUDA Streams | {icon:x cls=accent-secondary} | Weak | High | Low |
-| MPS | {icon:x cls=accent-secondary} | Medium | Low | Medium |
-| Time-slicing | {icon:x cls=accent-secondary} | Weak | High | Low |
-| MIG | {icon:x cls=accent-secondary} | Strong | High | N/A |
-| NVIDIA vGPU | {icon:x cls=accent-secondary} | Strong | Low | High |
-
----
-
-# PART 2  -  Problem
+# Part 1: The Problem
 
 @subtitle GPU underutilization, atomic allocation, multi-tenant contention
 
@@ -317,10 +65,549 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 
 - 1 GB task blocks an 80 GB device
 - Over-provisioning is the default: idle silicon
-- DRA can request GPUs but can't slice them
+- DRA can request GPUs but requires MIG to slice
 - Why HAMi if DRA slices? We'll get to that
 
 ![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
+
+---
+
+## What is HAMi
+
+@subtitle Static allocation, one GPU per task
+
+<!--
+GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing framework for Kubernetes. It lets you slice and share GPUs across workloads, maximizing utilization without rewriting your entire stack.
+-->
+
+![Before HAMi](assets/hami_intro/before-hami.png)
+
+---
+
+## What is HAMi
+@transition none
+
+@subtitle Fractional vGPUs, multiple tasks per device
+
+![After HAMi](assets/hami_intro/after-hami.png)
+
+---
+
+@layout compare
+
+## The GPU Challenge
+
+@subtitle What breaks, what we need
+
+::: card {tag=compare}
+### Problem
+
+- GPUs are scarce, allocated whole
+- Vendors locked in, supply tight
+- Utilization stuck at ~30%
+- No central observability
+- Fragmented inference workloads
+:::
+
+::: arrow
+
+{icon:arrow-right cls=accent-primary size=48}
+:::
+
+::: card {tag=compare}
+### Requirements
+
+- Hardware agnostic: one API, any accelerator
+- Fractional GPU: 1MB slices, multiple tasks per device
+- Advanced scheduling: binpack, spread, topology-aware
+:::
+
+<!--
+Heterogeneous GPU sharing means you can run NVIDIA A100s, H100s, Ascend or other devices on the same cluster without manual partitioning. HAMi handles the scheduling logic. The real work is memory isolation.
+-->
+
+::: notes{ tag="green" }
+Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
+:::
+
+---
+
+# Part 2: The Solution
+
+@subtitle Fractional GPU allocation and scheduling
+
+---
+
+## DRA Feature Timeline
+
+@subtitle KEPs and their development status: we won't cover this today
+
+<!--
+Backup slide. Shows all DRA KEPs and their dev status. Mention that DRA is moving fast -- 1.34 stable. We will skip this but it is here for questions.
+-->
+
+![DRA Feature Timeline](assets/hami/dra-feature-timeline.png)
+
+---
+
+@layout image-right
+
+## DRA: ResourceSlice
+
+@subtitle Per-node device inventory
+
+<!--
+DRA drivers run on each node and publish available devices. The scheduler reads ResourceSlices to find nodes that can satisfy a claim. This is how the scheduler knows what hardware is free.
+-->
+
+![ResourceSlice](assets/hami/dra-resource-slice.png)
+
+- **ResourceSlice:** lists all available devices on a node with their attributes
+- DRA drivers publish slices; scheduler reads them to match claims to devices
+- Tied to a node via `nodeName`, supports topology and NUMA attributes
+
+---
+
+@layout image-right
+
+## DRA: ResourceClaim
+
+@subtitle A standardized way to request hardware: not just GPUs. Stable in K8s 1.34.
+
+<!--
+DeviceClass defines a category of devices by capability. ResourceClaim requests specific hardware from that category. ResourceClaimTemplate creates a claim per pod automatically. Together these replace the old device plugin model.
+-->
+
+![ResourceClaim and ResourceClaimTemplate](assets/hami/dra-resource-claim.png)
+
+- **DeviceClass:** groups devices with identical resource models. **ResourceClaim:** a workload's ticket to hardware. **ResourceClaimTemplate:** reusable blueprint, auto-creates a claim per Pod.
+
+---
+
+## HAMi Capabilities
+
+@subtitle Six things HAMi brings to GPU scheduling
+
+<!--
+Six capabilities. The key ones for this talk: hard isolation, advanced scheduling, and unified monitoring. Heterogeneous management is the differentiator -- not just NVIDIA.
+-->
+
+::: grid {cols=2}
+::: card
+### {icon:layers cls=accent-primary} Heterogeneous Management
+
+Manage GPU, NPU, MLU, and other accelerators in one workflow.
+:::
+::: card
+### {icon:shield-check cls=accent-primary} Hard Isolation
+
+Slice memory and compute with hard isolation at runtime.
+:::
+::: card
+### {icon:git-branch cls=accent-contrast} Advanced Scheduling
+
+Binpack, spread, and topology-aware placement policies.
+:::
+::: card
+### {icon:box cls=accent-primary} Kubernetes Native
+
+Kubernetes-native APIs, DRA, and CDI support.
+:::
+::: card
+### {icon:gauge cls=accent-primary} Resource Isolation & QoS
+
+Memory and core quotas for fair, stable sharing.
+:::
+::: card
+### {icon:chart-bar cls=accent-contrast} Unified Monitoring
+
+Consistent metrics and visibility across vendors.
+:::
+:::
+
+
+---
+
+@layout two-col
+
+## How HAMi Works
+
+@subtitle Pod creation to GPU isolation
+
+<!--
+Seven stages from pod submission to isolated GPU. The mutating webhook injects the request, the HAMi core library enforces isolation via symbolic hijacking: no kernel modules.
+-->
+
+HAMi intercepts pod creation and GPU allocation through seven stages:
+
+- **Mutating webhook:** injects device request into pod spec
+- **Scheduler:** selects GPU and node via HAMi scheduler plugin
+- **Device plugin:** allocates GPU memory and compute cores
+- **Container runtime:** injects HAMi-Core library into container
+- **HAMi core:** enforces isolation in-process via symbolic hijacking
+
+@col
+
+```dot
+digraph G {
+  rankdir=TB
+  bgcolor=transparent
+  node [shape=box style="rounded,filled" fontname="Arial" fontsize=16 margin="0.25,0.18"]
+  edge [fontname="Arial" fontsize=12]
+
+  pod [label="Pod submitted" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+  webhook [label="Mutating webhook" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  sched [label="Scheduler" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  device [label="Device plugin" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+
+  runtime [label="Container runtime" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+  core [label="HAMi core" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  workload [label="Workload (isolated GPU)" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+
+  { rank=same; pod; runtime }
+  { rank=same; webhook; core }
+  { rank=same; sched; workload }
+
+  pod -> webhook [label="inject request"]
+  webhook -> sched [label="select GPU+node"]
+  sched -> device [label="allocate\nmem/cores"]
+
+  device -> runtime [label="inject lib" constraint=false style=dashed]
+
+  runtime -> core [label="enforce isolation"]
+  core -> workload [label="sees isolated GPU"]
+}
+```
+
+---
+
+@layout two-col
+
+## GPU Sharing
+
+@subtitle Dynamic fine-grained device slicing
+
+<!--
+Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
+-->
+
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
+- **Fine-grained:** as small as 1MB device memory, 1% computing cores
+- **Transparent to tasks:** no code changes required
+- **Hard resource isolation** inside containers
+- One API across vendors: same YAML, any accelerator
+
+@col
+
+```yaml
+# Ascend 910C: 8GB + 20% compute
+resources:
+  limits:
+    huawei.com/Ascend910C: "1"
+    huawei.com/Ascend910C-core: "20"
+    huawei.com/Ascend910C-memory: "8192"
+```
+
+```yaml
+# NVIDIA: 3GB on any GPU
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 3000
+```
+
+
+---
+
+## GPU Utilization Impact
+@hidden
+
+@subtitle Idle tasks swap to host RAM
+
+Idle tasks swap to host RAM, freeing device memory for active workloads:
+
+::: card
+```seaborn
+import matplotlib.pyplot as plt
+from matplotlib.patches import FancyBboxPatch
+
+fig, ax = plt.subplots(figsize=(8, 2.8))
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+danger = cmap(4.5 / 12)
+danger_bright = cmap(5 / 12)
+elastic = cmap(2.5 / 12)
+base = cmap(0.5 / 12)
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+r = 0.14
+bs = f"round,pad={r}"
+
+# Row 1: base=8, spike=3
+ax.barh(1, 8, color=base, height=0.65)
+ax.barh(1, 3, left=8, color=danger, height=0.65)
+ax.plot([10, 10], [0.62, 1.38], color=danger, linewidth=2.5, solid_capstyle="butt")
+
+# Row 2: base=8, spike=7
+ax.barh(0, 8, color=base, height=0.65)
+ax.barh(0, 7, left=8, color=elastic, height=0.65)
+ax.plot([10, 10], [-0.38, 0.38], color=fg, linewidth=1.5, linestyle="--")
+ax.plot([15, 15], [-0.38, 0.38], color=fg, linewidth=1.5, linestyle="--")
+
+ax.set_xlim(0, 15.2)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+ax.text(0, 1.38, "Without HAMi", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+ax.text(0, 0.38, "With HAMi: Elastic Scaling", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+
+ax.text(4, 1, "Normal base load", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+ax.text(9.5, 1, "Traffic spike", ha="center", va="center", fontsize=7.5, color=dimmed, fontweight="bold")
+ax.text(10, 1.42, "10 GB limit", ha="center", va="bottom", fontsize=8, color=danger_bright, fontweight="bold")
+
+ax.text(4, 0, "Normal base load", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+ax.text(11.5, 0, "Traffic spike", ha="center", va="center", fontsize=7.5, color=dimmed, fontweight="bold")
+ax.text(10, -0.42, "10 GB\nsoft limit", ha="center", va="top", fontsize=7.5, color=dimmed)
+ax.text(15, -0.42, "15 GB\nburst", ha="center", va="top", fontsize=7.5, color=dimmed)
+```
+:::
+
+:::card
+```seaborn
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 2.8))
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+green = cmap(2.5 / 12)
+blue = cmap(0.5 / 12)
+red = cmap(4.5 / 12)
+grey = "#9ca3af"
+sleep_bg = "#374151"
+
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+# Top: IDLE(25) + EXECUTING(50) + IDLE(25)
+ax.barh(1, 25, color=grey, height=0.65)
+ax.barh(1, 50, left=25, color=green, height=0.65)
+ax.barh(1, 25, left=75, color=grey, height=0.65)
+
+# Bottom: EXECUTING(25) + SLEEP(50) + EXECUTING(25)
+ax.barh(0, 25, color=blue, height=0.65)
+ax.barh(0, 50, left=25, color=sleep_bg, height=0.65)
+ax.barh(0, 25, left=75, color=blue, height=0.65)
+
+# Segment dividers
+for x in [25, 75]:
+    ax.plot([x, x], [0.62, 1.38], color=fg, linewidth=0.8, linestyle="--")
+    ax.plot([x, x], [-0.38, 0.62], color=fg, linewidth=0.8, linestyle="--")
+
+ax.set_xlim(0, 100)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+# Side labels
+ax.text(0, 1.38, "HIGH PRIORITY", ha="left", va="bottom", fontsize=10, color=green, fontweight="bold")
+ax.text(0, 0.38, "LOW PRIORITY", ha="left", va="bottom", fontsize=10, color=blue, fontweight="bold")
+
+# Top bar labels
+ax.text(12.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 1, "EXECUTING", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+ax.text(87.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+
+# Bottom bar labels
+ax.text(12.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 0, "SLEEP", ha="center", va="center", fontsize=9, color=red, fontweight="bold")
+ax.text(87.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+
+ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, color=red)
+```
+:::
+
+---
+
+## Priority Preemption
+
+@subtitle High priority pauses low priority at kernel boundaries
+
+<!--
+HIGH PRIORITY tasks preempt LOW PRIORITY at CUDA kernel boundaries. No wasted compute. The kernel boundary is the key -- you cannot preempt mid-kernel.
+-->
+@hidden
+
+High-priority tasks preempt low-priority ones at CUDA kernel boundaries: no wasted compute, clean context switch:
+
+:::card
+```seaborn
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 2.8))
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+green = cmap(2.5 / 12)
+blue = cmap(0.5 / 12)
+red = cmap(4.5 / 12)
+grey = "#9ca3af"
+sleep_bg = "#374151"
+
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+# Top: IDLE(25) + EXECUTING(50) + IDLE(25)
+ax.barh(1, 25, color=grey, height=0.65)
+ax.barh(1, 50, left=25, color=green, height=0.65)
+ax.barh(1, 25, left=75, color=grey, height=0.65)
+
+# Bottom: EXECUTING(25) + SLEEP(50) + EXECUTING(25)
+ax.barh(0, 25, color=blue, height=0.65)
+ax.barh(0, 50, left=25, color=sleep_bg, height=0.65)
+ax.barh(0, 25, left=75, color=blue, height=0.65)
+
+# Segment dividers
+for x in [25, 75]:
+    ax.plot([x, x], [0.62, 1.38], color=fg, linewidth=0.8, linestyle="--")
+    ax.plot([x, x], [-0.38, 0.62], color=fg, linewidth=0.8, linestyle="--")
+
+ax.set_xlim(0, 100)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+
+# Side labels
+ax.text(0, 1.38, "HIGH PRIORITY", ha="left", va="bottom", fontsize=10, color=green, fontweight="bold")
+ax.text(0, 0.38, "LOW PRIORITY", ha="left", va="bottom", fontsize=10, color=blue, fontweight="bold")
+
+# Top bar labels
+ax.text(12.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 1, "EXECUTING", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+ax.text(87.5, 1, "IDLE", ha="center", va="center", fontsize=9, color=fg)
+
+# Bottom bar labels
+ax.text(12.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+ax.text(50, 0, "SLEEP", ha="center", va="center", fontsize=9, color=red, fontweight="bold")
+ax.text(87.5, 0, "EXECUTING", ha="center", va="center", fontsize=9, color=fg)
+
+ax.text(50, -0.35, "CUDA-KERNEL BOUNDARY", ha="center", va="top", fontsize=7, color=red)
+```
+:::
+
+---
+
+## Memory Oversubscription
+@hidden
+
+<!--
+23 GB device + 46 GB virtual = 3x models. GPU memory swapped to host RAM for idle tasks. Works for model loading and inference, not for active training.
+-->
+
+@subtitle 23 GB device + 46 GB virtual = 3x models
+
+@layout compare
+
+::: card {tag=compare}
+### Before
+
+23GB Device Memory hosts **1** 13B inference model
+:::
+
+::: arrow
+
+{icon:arrow-right cls=accent-primary size=48}
+:::
+
+::: card {tag=compare}
+### After
+
+23GB Device + 46GB virtual memory hosts **3** 13B inference models
+:::
+
+::: notes{ tag="green" }
+GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: model loading and inference serving.
+:::
+
+---
+
+## GPU Sharing Parameters
+
+@subtitle Fine-grained control per task
+@hidden
+
+- : GPU memory size, defaults to all available
+- : compute percentage, 0-100
+
+---
+
+@layout image-right
+
+## Scheduling Policies
+
+@subtitle Binpack & Spread
+
+<!--
+Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency. Pick based on workload: training wants binpack, inference with SLOs wants spread.
+-->
+
+![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
+
+- **Node binpack** frees whole machines: reduces cost, helps cluster autoscaler
+- **Node spread** isolates faults: HA across zones, blast radius control
+- **GPU binpack** prevents fragmentation: frees entire GPUs for training
+- **GPU spread** protects tail latency: reduces HBM and NVLink contention
+- Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn or Volcano
+
+---
+
+@layout image-right
+
+## Scheduling Policies
+
+@subtitle Topology-Aware
+
+<!--
+NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs. Ascend uses HCCS, other vendors have their own high-speed interconnects: same topology logic applies. This matters for tensor parallelism and large-model training.
+-->
+
+![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
+
+- **NVLink 3 (A100):** 600 GB/s, 12 links
+- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
+- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
+- **NVLink 6 (Rubin):** ~3.6 TB/s target
+- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
+- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
+
+---
+
+
+
+## GPU Sharing Approaches
+
+@subtitle MIG vs HAMi vs HAMi+DRA vs NVIDIA DRA
+
+<!--
+Common question: why not just use MIG? MIG doesn't work on all devices. You need to manually load MIG templates. HAMi does it automatically based on workload choice. NVIDIA's DRA driver has limited slicing. DRA itself still lacks advanced scheduling.
+-->
+
+| Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
+|------------|:---:|:---:|:---:|:---:|
+| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Symbolic hijacking (1MB slice) | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
+
+MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
+
+
+---
+# Part 3: Viettel Cloud
 
 ---
 
@@ -412,7 +699,7 @@ Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pip
 
 ---
 
-# PART 3  -  Methodology
+# PART 4  -  Methodology
 
 @subtitle How We Fixed It
 
@@ -484,7 +771,7 @@ Traditional metrics (CPU/RAM/DCGM) fail to reflect GPU service saturation. Heter
 
 ---
 
-# PART 4  -  Results
+# PART 5  -  Results
 
 @subtitle What We Achieved
 
@@ -573,21 +860,98 @@ Custom KEDA metrics beat reactive scaling for GPU workloads with warm-up latency
 
 ---
 
-@layout ecosystem
+# Part 6: Where We Are Today
+
+@subtitle Adoption, Case Studies, Community 
+
+---
+
+@hidden
+## Applicable Scenarios
+
+@subtitle Online inference, A/B testing, mixed workloads
+
+<!--
+Four scenarios HAMi enables. Key message: GPU sharing is not one-size-fits-all. Online inference saves cost, A/B testing saves hardware, mixed train/infer keeps GPUs busy, LLM optimization fits more models per device.
+-->
+
+::: grid {cols=2}
+::: card {tag=green}
+### {icon:globe cls=accent-primary} Online Inference
+
+10 services share one GPU. Activate on-demand, low-frequency services share resources. Significantly reduces GPU costs.
+:::
+::: card {tag=cyan}
+### {icon:git-compare-arrows cls=accent-contrast} A/B Testing
+
+Virtual GPU memory reduces hardware requirements. Original + experimental models share a single GPU.
+:::
+:::
+
+::: grid {cols=2}
+::: card {tag=yellow}
+### {icon:refresh-cw cls=accent-contrast} Mixed Train/Infer
+
+Inference gets priority, training fills gaps. When inference idle, cached training runs. Flexible queue-based scheduling.
+:::
+::: card {tag=cyan}
+### {icon:zap cls=accent-primary} LLM Optimization
+
+Multiple small models (embedding, reranker, generator) share GPUs. 4 threads → 8 threads on same hardware.
+:::
+:::
+
+---
+
+@layout metrics
 ## Where We Are Today
 
-@subtitle Community, devices, adopters
+@subtitle HAMi in Production: 7 case studies, more coming
 
-::: grid {cols=5}
-::: card {grid-heading}
-### Open Source, CNCF Backed, Production Ready
+::: grid {cols=4}
+::: card {metric}
+3x
+GPU density
 :::
 ::: card {metric}
-3.1k
+10x
+Workloads per device
+:::
+::: card {metric}
+80%
+Less ops overhead
+:::
+::: card {metric}
+2x
+GPU utilization
+:::
+:::
+
+@row
+
+::: notes{ tag="green" }
+China Merchants Bank · SNOW Corp. · NIO · KE Holdings · DaoCloud · SF Technology · Prep Education · [cncf.io/case-studies](https://www.cncf.io/case-studies/) · Reach out for help submitting yours.
+:::
+
+---
+
+@layout ecosystem
+## Community & Adopters
+
+@subtitle Devices, integrations, and who uses HAMi
+
+<!--
+4.1k stars, 325k pulls, 500+ contributors, 27 countries. 11 device types, 20+ adopters. This is the ecosystem slide -- show the breadth. The QR code links to github.com/Project-HAMi/HAMi.
+-->
+
+#### Open Source, CNCF Backed, Production Ready
+::: grid {cols=5}
+::: card {metric}
+4.1k
 Github Stars
 :::
 ::: card {metric}
-114k
+325k
 Docker Pulls
 :::
 ::: card {metric}
@@ -595,19 +959,17 @@ Docker Pulls
 Contributors
 :::
 ::: card {metric}
-17
+27
 Contributor Countries
 :::
 ::: card
 
-![Kubernetes](assets/ecosystem/integrations/kubernetes.png) ![Volcano](assets/ecosystem/integrations/volcano.png) ![Kueue](assets/ecosystem/integrations/kueue.png) ![Koordinator](assets/ecosystem/integrations/koordinator.png)
+![Kubernetes](assets/ecosystem/integrations/kubernetes.png) ![Volcano](assets/ecosystem/integrations/volcano.png) ![Kueue](assets/ecosystem/integrations/kueue.png) ![Koordinator](assets/ecosystem/integrations/koordinator.png) ![KAI Scheduler](assets/ecosystem/integrations/kai-scheduler.png) ![cozystack](assets/ecosystem/integrations/cozystack.svg)
 :::
 :::
 
+#### Ecosystem & Device Support
 ::: grid {cols=2}
-::: card {grid-heading}
-### Ecosystem & Device Support
-:::
 ::: card
 ![NVIDIA](assets/ecosystem/devices/nvidia.png) ![Ascend](assets/ecosystem/devices/ascend.png) ![Cambricon](assets/ecosystem/devices/cambricon.png) ![Hygon](assets/ecosystem/devices/hygon.png) ![Iluvatar](assets/ecosystem/devices/illuvitar.png)
 ![Metax](assets/ecosystem/devices/metax.png) ![Moore Threads](assets/ecosystem/devices/moorethreads.png) ![Kunlunxin](assets/ecosystem/devices/kunlunxin.png) ![Enflame](assets/ecosystem/devices/enflame.png)
@@ -615,26 +977,20 @@ Contributor Countries
 :::
 :::
 
+#### Adopters
 ::: grid {cols=2}
-::: card {grid-heading}
-### Adopters
-:::
 ::: card
 ![4Paradigm](assets/ecosystem/adopters/4paradigm.png) ![Baidu](assets/ecosystem/adopters/baiduzhineng.png) ![Baike](assets/ecosystem/adopters/baike.png) ![China Merchants](assets/ecosystem/adopters/chinamerchants.png) ![China Mobile](assets/ecosystem/adopters/chinamobile.png)
 ![China Unicom](assets/ecosystem/adopters/chinaunicom.png) ![DaoCloud](assets/ecosystem/adopters/daocloud.png) ![Dynamia](assets/ecosystem/adopters/dynamia.png) ![H3C](assets/ecosystem/adopters/h3c.png) ![Huawei](assets/ecosystem/adopters/huawei.png)
 ![LinkedIn](assets/ecosystem/adopters/linkedin.png) ![MSXF](assets/ecosystem/adopters/msxf.png) ![NIO](assets/ecosystem/adopters/nio.png) ![PPIO](assets/ecosystem/adopters/ppio.png) ![Prep](assets/ecosystem/adopters/prep.png)
 ![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
-::: card {side-image}
-![GitHub QR](assets/ecosystem/github-qr.png)
 :::
-:::
-
 ---
 
 @kicker Questions
 
 # Thank You
 
-@speaker name="Jeonghyun Kim" role="AI Engineer, SNOW Corp."
-@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
+@speaker name="Jeonghyun Kim" role="AI Engineer, SNOW Corp." github=github.com/jeonghyunkeem linkedin=linkedin.com/in/jeonghyun-kim-2399a6203
+@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh linkedin=linkedin.com/in/rezajelveh

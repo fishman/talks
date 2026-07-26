@@ -9,7 +9,7 @@ paginate: true
 ---
 
 @kicker HAMi - A CNCF Incubation Project
-
+@side-image assets/kcd_vietnam/qr-code.png
 # Shared GPU Scheduling & Proactive Autoscaling
 
 @subtitle A Production Blueprint for 1000+ GPUs
@@ -991,7 +991,7 @@ Contributor Countries
 ---
 
 @kicker Questions
-
+@side-image assets/kcd_vietnam/qr-code.png
 # Thank You
 
 @speaker name="Jeonghyun Kim" role="AI Engineer, SNOW Corp." github=github.com/jeonghyunkeem linkedin=linkedin.com/in/jeonghyun-kim-2399a6203

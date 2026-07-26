@@ -607,7 +607,9 @@ MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based 
 
 
 ---
-# Part 3: Viettel Cloud
+# Part 3: Legacy & Migration
+
+@subtitle Static Docker, GPU fragmentation, operational overload
 
 ---
 
@@ -699,7 +701,7 @@ Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pip
 
 ---
 
-# PART 4  -  Methodology
+# Part 4: Methodology
 
 @subtitle How We Fixed It
 
@@ -771,7 +773,7 @@ Traditional metrics (CPU/RAM/DCGM) fail to reflect GPU service saturation. Heter
 
 ---
 
-# PART 5  -  Results
+# Part 5: Results
 
 @subtitle What We Achieved
 

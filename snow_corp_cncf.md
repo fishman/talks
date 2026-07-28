@@ -604,7 +604,7 @@ GPU memory automatically swapped to host RAM for idle tasks. Typical scenario: m
 Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency. Pick based on workload: training wants binpack, inference with SLOs wants spread.
 -->
 
-![Binpack vs Spread scheduling](assets/hami_intro/binpack_spread.png)
+![Binpack vs Spread scheduling](assets/hami_intro/scheduling_strategies.png)
 
 - **Node binpack** frees whole machines: reduces cost, helps cluster autoscaler
 - **Node spread** isolates faults: HA across zones, blast radius control

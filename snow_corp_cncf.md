@@ -1,11 +1,35 @@
 ---
 theme: kubecon_japan
 title: HAMi - Shared GPU Scheduling & Proactive Autoscaling
-logo: assets/brand/dynamia-logo.svg
-logo_dark: assets/brand/dynamia-logo-white.png
+logo: assets/brand/snow-logo-long.png
+logo_dark: assets/brand/snow-logo-long.png
 watermark: assets/brand/kubecon_japan/cncf_logo.svg
 footer: Shared GPU Scheduling & Proactive Autoscaling - KubeCon CloudNativeCon Japan 2026
 paginate: true
+style: |
+  /* Two brand marks top-right: SNOW first, Dynamia second.
+     base.css paints a single --logo on section::before, so the whole
+     background is redeclared here as two layers (user style wins). */
+  :root {
+    --logo-snow: url("assets/brand/snow-logo-long.png");
+    --logo-dynamia: url("assets/brand/dynamia-logo.svg");
+    --logo-dynamia-white: url("assets/brand/dynamia-logo-white.png");
+  }
+  section::before {
+    width: 24%;
+    padding-bottom: 5%;
+    background:
+      var(--logo-snow) left center / auto 46% no-repeat,
+      var(--logo-dynamia) right center / auto 58% no-repeat;
+  }
+  /* dark backgrounds: title + part dividers, and any data-theme dark slide */
+  section.layout-title::before,
+  section[data-theme="dark"]::before,
+  [data-theme="dark"] section::before {
+    background:
+      var(--logo-snow) left center / auto 46% no-repeat,
+      var(--logo-dynamia-white) right center / auto 58% no-repeat;
+  }
 ---
 
 @kicker HAMi - A CNCF Incubation Project
@@ -32,6 +56,32 @@ SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users acro
 - {icon:download cls=accent-primary} 1.5B+ cumulative downloads
 
 ![a16z Top 50 Gen AI Mobile Apps](assets/snow/snow-top50.png)
+
+![SNOW AI image filter usage in 2024](assets/snow/snow-usage-ai-filter-2024.png)
+
+---
+
+## Three Workload Challenges
+
+@subtitle Continuous evolution, traffic volatility, heterogeneous workflows
+
+::: grid {cols=3}
+::: card {tag=cyan}
+### {icon:rocket cls=accent-primary} Continuous Service Evolution
+
+Market leadership needs a constant stream of new GenAI filters: rapid model deployment and frequent updates with no service interruption.
+:::
+::: card {tag=red}
+### {icon:trending-up cls=accent-secondary} Extreme Traffic Volatility
+
+Viral AI trends such as the Ghibli Filter trigger unpredictable surges up to 700%, making static capacity planning impossible.
+:::
+::: card {tag=yellow}
+### {icon:layers cls=accent-contrast} Heterogeneous Inference Workflows
+
+A diverse filter lineup mixes compute-heavy and memory-intensive work, so one-size-fits-all allocation is inefficient.
+:::
+:::
 
 ---
 
@@ -66,7 +116,7 @@ Kubernetes allocates GPUs atomically. DRA + HAMi fix this.
 - 1 GB task blocks an 80 GB device
 - Over-provisioning is the default: idle silicon
 - DRA can request GPUs but requires MIG to slice
-- Why HAMi if DRA slices? We'll get to that
+- Why HAMi if DRA slices? Covered in Part 2
 
 ![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
 
@@ -97,7 +147,7 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 
 ## The GPU Challenge
 
-@subtitle What breaks, what we need
+@subtitle What breaks, what HAMi needs to solve
 
 ::: card {tag=compare}
 ### Problem
@@ -140,7 +190,7 @@ Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU avail
 
 ## DRA Feature Timeline
 
-@subtitle KEPs and their development status: we won't cover this today
+@subtitle KEPs and their development status: not covered today
 
 <!--
 Backup slide. Shows all DRA KEPs and their dev status. Mention that DRA is moving fast -- 1.34 stable. We will skip this but it is here for questions.
@@ -687,23 +737,9 @@ No automatic recovery. Manual intervention drove up staff workload and operation
 
 ---
 
-## GPU Sharing: The Migration Hurdle
-
-@subtitle Train-to-Inference pipeline blocked by GPU isolation
-
-Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pipeline.
-
-![Sequential Train-to-Inference Pipeline](assets/snow/sequential-train-to-inference.png)
-
-**Problem:** Default scheduler cannot share one GPU across containers.
-
-**Without HAMi:** 2x GPU usage or massive code rewrite.
-
----
-
 # Part 4: Methodology
 
-@subtitle How We Fixed It
+@subtitle How SNOW Fixed It
 
 ---
 
@@ -743,6 +779,20 @@ Standardized deployment via Helm Charts. Sync between charts and clusters perfor
 
 ---
 
+## GPU Sharing: The Migration Hurdle
+
+@subtitle Train-to-Inference pipeline blocked by GPU isolation
+
+Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pipeline.
+
+![Sequential Train-to-Inference Pipeline](assets/snow/sequential-train-to-inference.png)
+
+**Problem:** Default scheduler cannot share one GPU across containers.
+
+**Without HAMi:** 2x GPU usage or massive code rewrite.
+
+---
+
 @layout image-right
 
 ## Migration Solution: HAMi vGPU
@@ -761,36 +811,95 @@ Result: flexible GPU scheduling comparable to Docker, with enhanced utilization 
 
 ## Proactive GPU Orchestration
 
-@subtitle Custom KEDA metrics for GPU saturation
+@subtitle Why conventional metrics miss GPU saturation
 
-Traditional metrics (CPU/RAM/DCGM) fail to reflect GPU service saturation. Heterogeneous workloads mean utilization ≠ saturation.
+SNOW's inference fleet is heterogeneous, so utilization and saturation are not the same signal.
 
-**Solution: Custom KEDA Metric Server**
-- Lightweight adapter exposes RabbitMQ consumer states to HPA
-- "Consumer Saturation" metric: Unacked Messages / Active Consumers
-- Proactive threshold provisions GPUs before saturation
-- Absorbs 60-second model warm-up latency
+::: grid {cols=2}
+::: card {tag=red}
+### {icon:chart-pie cls=accent-secondary} Inaccurate Saturation Signal
+
+CPU and RAM miss real service load. Even DCGM GPU utilization is unreliable: varying workflow intensities mean high utilization does not imply saturation, and vice versa.
+
+Training runs near 80% compute and 20% memory. Inference has the opposite profile.
+:::
+::: card {tag=yellow}
+### {icon:clock cls=accent-contrast} Lagging Indicator
+
+KEDA's built-in RabbitMQ scaler triggers on queue length, so it only reacts once a backlog exists.
+
+With a 60 second model warm-up, that is already too late: requests are throttled before new workers can serve.
+:::
+:::
+
+---
+
+@layout image-right
+
+## Custom KEDA Metric Server
+
+@subtitle Consumer Saturation: unacked messages / active consumers
+
+SNOW built a lightweight Python metric server that exposes real-time RabbitMQ consumer state to the Kubernetes HPA through KEDA's Metrics API.
+
+- {icon:calculator cls=accent-primary} `active_ratio = unacked / consumers`, scaling out above a **0.7** threshold
+- {icon:zap cls=accent-primary} Provisions GPUs **before** the pool saturates, creating a buffer that absorbs the 60s warm-up
+- {icon:timer cls=accent-primary} Longer stabilization and cooldown windows prevent premature scale-in during traffic lulls
+
+@col
+
+![Custom KEDA autoscaling logic](assets/snow/custom-keda-metric-logic.png)
+
+---
+
+## From Wasted to Secured GPU Time
+
+@subtitle GPU allocation tracks real-time user traffic
+
+![Impact of proactive autoscaling on GPU efficiency](assets/snow/proactive-autoscaling-impact.png)
+
+Static provisioning burns **wasted GPU time** when supply sits above traffic (orange), and still drops **unserved spikes** (red). After autoscaling, allocation tracks demand closely (green).
 
 ---
 
 # Part 5: Results
 
-@subtitle What We Achieved
+@subtitle What SNOW Achieved
 
 ---
 
 ## Quantitative Results
 
-@subtitle 91 percent faster recovery, 55 percent less GPU waste
+@subtitle Fewer GPUs, less idle time, faster recovery
+
+::: card {metric}
+2x
+Fewer GPUs for train plus inference pipelines
+:::
+::: card {metric}
+-55%
+Average GPU time per production cluster
+:::
+::: card {metric}
+-91%
+MTTR, from ~2hr to ~10min
+:::
+::: card {metric}
+-85%
+GPU surge errors during peak traffic
+:::
+
+---
+
+## Operational Impact
+
+@subtitle Autonomy, velocity, and headroom
 
 | Metric | Improvement |
 |--------|-------------|
-| MTTR | -91% (~2hr → ~10min) |
-| GPU surge errors | -85% during peak |
-| Avg GPU time | -55% |
 | Batch process time | -81% (~6hr → <1hr) |
-| Cost savings | 10.8 man-months |
 | Release cycle | 1-2 months → days |
+| Operations reclaimed | 10.8 man-months |
 | Peak traffic | 700% spike, zero downtime |
 
 ---
@@ -823,6 +932,24 @@ During the viral "Ghibli Filter" trend:
 - Unified Helm charts deployed across all regions
 
 Achieved 7x peak consumption without service interruption.
+
+---
+
+@layout image-right
+
+## Multi-Cluster Bursting Architecture
+
+@subtitle One GitOps pipeline across on-premise and CSP regions
+
+To overcome on-premise capacity limits, the system expanded into Cloud Service Provider regions.
+
+- {icon:git-branch cls=accent-primary} Identical Helm charts deployed to every cluster via GitOps
+- {icon:server cls=accent-primary} On-premise Regions A and B, burst into CSP Regions C and D
+- {icon:link cls=accent-primary} CSP worker nodes consume from the central RabbitMQ over a secured connection
+
+@col
+
+![Hybrid Cloud Bursting Architecture](assets/snow/hybrid-cloud-bursting-architecture.png)
 
 ---
 
@@ -862,7 +989,7 @@ Custom KEDA metrics beat reactive scaling for GPU workloads with warm-up latency
 
 ---
 
-# Part 6: Where We Are Today
+# Part 6: Where HAMi Is Today
 
 @subtitle Adoption, Case Studies, Community 
 
@@ -906,7 +1033,7 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 ---
 
 @layout metrics
-## Where We Are Today
+## Where HAMi Is Today
 
 @subtitle HAMi in Production: 7 case studies, more coming
 

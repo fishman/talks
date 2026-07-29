@@ -43,62 +43,6 @@ style: |
 
 ---
 
-@layout image-right
-
-## The Challenge at Scale
-
-@subtitle 200M Users, 1000+ GPUs, 1200+ Workflows
-
-SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users across three top-ranked GenAI applications  -  SNOW, EPIK, B612  -  handling extreme traffic volatility from viral AI trends.
-
-- {icon:trophy cls=accent-primary} 3 apps in a16z Top 50 Gen AI Mobile Apps
-- {icon:users cls=accent-primary} #1 Camera/Photo app in Korea, Japan, Vietnam
-- {icon:download cls=accent-primary} 1.5B+ cumulative downloads
-
-![a16z Top 50 Gen AI Mobile Apps](assets/snow/snow-top50.png)
-
-![SNOW AI image filter usage in 2024](assets/snow/snow-usage-ai-filter-2024.png)
-
----
-
-## Three Workload Challenges
-
-@subtitle Continuous evolution, traffic volatility, heterogeneous workflows
-
-::: grid {cols=3}
-::: card {tag=cyan}
-### {icon:rocket cls=accent-primary} Continuous Service Evolution
-
-Market leadership needs a constant stream of new GenAI filters: rapid model deployment and frequent updates with no service interruption.
-:::
-::: card {tag=red}
-### {icon:trending-up cls=accent-secondary} Extreme Traffic Volatility
-
-Viral AI trends such as the Ghibli Filter trigger unpredictable surges up to 700%, making static capacity planning impossible.
-:::
-::: card {tag=yellow}
-### {icon:layers cls=accent-contrast} Heterogeneous Inference Workflows
-
-A diverse filter lineup mixes compute-heavy and memory-intensive work, so one-size-fits-all allocation is inefficient.
-:::
-:::
-
----
-
-## Talk Overview
-
-@subtitle Shared GPU Scheduling & Proactive Autoscaling
-
-**What you'll learn:**
-
-- {icon:cpu cls=accent-primary} Integrating HAMi for vGPU virtualization
-- {icon:trending-up cls=accent-primary} Extending KEDA with custom Consumer Saturation metric
-- {icon:globe cls=accent-primary} Multi-region scaling via Helm GitOps
-
-**Concrete results:** 55% GPU waste cut, 91% faster recovery during surges.
-
----
-
 # Part 1: The Problem
 
 @subtitle GPU underutilization, atomic allocation, multi-tenant contention
@@ -275,6 +219,43 @@ Consistent metrics and visibility across vendors.
 :::
 :::
 
+---
+
+@layout two-col
+
+## GPU Sharing
+
+@subtitle Dynamic fine-grained device slicing
+
+<!--
+Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
+-->
+
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
+- **Fine-grained:** as small as 1MB device memory, 1% computing cores
+- **Transparent to tasks:** no code changes required
+- **Hard resource isolation** inside containers
+- One API across vendors: same YAML, any accelerator
+
+@col
+
+```yaml
+# Ascend 910C: 8GB + 20% compute
+resources:
+  limits:
+    huawei.com/Ascend910C: "1"
+    huawei.com/Ascend910C-core: "20"
+    huawei.com/Ascend910C-memory: "8192"
+```
+
+```yaml
+# NVIDIA: 3GB on any GPU
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 3000
+```
+
 
 ---
 
@@ -327,43 +308,6 @@ digraph G {
   runtime -> core [label="enforce isolation"]
   core -> workload [label="sees isolated GPU"]
 }
-```
-
----
-
-@layout two-col
-
-## GPU Sharing
-
-@subtitle Dynamic fine-grained device slicing
-
-<!--
-Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
--->
-
-- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
-- **Fine-grained:** as small as 1MB device memory, 1% computing cores
-- **Transparent to tasks:** no code changes required
-- **Hard resource isolation** inside containers
-- One API across vendors: same YAML, any accelerator
-
-@col
-
-```yaml
-# Ascend 910C: 8GB + 20% compute
-resources:
-  limits:
-    huawei.com/Ascend910C: "1"
-    huawei.com/Ascend910C-core: "20"
-    huawei.com/Ascend910C-memory: "8192"
-```
-
-```yaml
-# NVIDIA: 3GB on any GPU
-resources:
-  limits:
-    nvidia.com/gpu: 1
-    nvidia.com/gpumem: 3000
 ```
 
 
@@ -660,6 +604,62 @@ MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based 
 # Part 3: Legacy & Migration
 
 @subtitle Static Docker, GPU fragmentation, operational overload
+
+---
+## Talk Overview
+
+@subtitle Shared GPU Scheduling & Proactive Autoscaling
+
+**What you'll learn:**
+
+- {icon:cpu cls=accent-primary} Integrating HAMi for vGPU virtualization
+- {icon:trending-up cls=accent-primary} Extending KEDA with custom Consumer Saturation metric
+- {icon:globe cls=accent-primary} Multi-region scaling via Helm GitOps
+
+**Concrete results:** 55% GPU waste cut, 91% faster recovery during surges.
+
+---
+
+
+@layout image-right
+
+## The Challenge at Scale
+
+@subtitle 200M Users, 1000+ GPUs, 1200+ Workflows
+
+SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users across three top-ranked GenAI applications  -  SNOW, EPIK, B612  -  handling extreme traffic volatility from viral AI trends.
+
+- {icon:trophy cls=accent-primary} 3 apps in a16z Top 50 Gen AI Mobile Apps
+- {icon:users cls=accent-primary} #1 Camera/Photo app in Korea, Japan, Vietnam
+- {icon:download cls=accent-primary} 1.5B+ cumulative downloads
+
+![a16z Top 50 Gen AI Mobile Apps](assets/snow/snow-top50.png)
+
+![SNOW AI image filter usage in 2024](assets/snow/snow-usage-ai-filter-2024.png)
+
+---
+
+## Three Workload Challenges
+
+@subtitle Continuous evolution, traffic volatility, heterogeneous workflows
+
+::: grid {cols=3}
+::: card {tag=cyan}
+### {icon:rocket cls=accent-primary} Continuous Service Evolution
+
+Market leadership needs a constant stream of new GenAI filters: rapid model deployment and frequent updates with no service interruption.
+:::
+::: card {tag=red}
+### {icon:trending-up cls=accent-secondary} Extreme Traffic Volatility
+
+Viral AI trends such as the Ghibli Filter trigger unpredictable surges up to 700%, making static capacity planning impossible.
+:::
+::: card {tag=yellow}
+### {icon:layers cls=accent-contrast} Heterogeneous Inference Workflows
+
+A diverse filter lineup mixes compute-heavy and memory-intensive work, so one-size-fits-all allocation is inefficient.
+:::
+:::
 
 ---
 

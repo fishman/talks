@@ -26,6 +26,10 @@ style: |
   /* dashboard screenshot: base.css caps images at 70% of slide height.
      Let this one use the full space between subtitle and footer. */
   section img[src$="monitoring-dashboards.png"] { max-height: 548px; }
+  /* two stacked figures share one 462px column. Keep the architecture
+     diagram full width and cap the workflow below it, so the pair fits
+     instead of being centre-cropped by overflow:hidden */
+  section img[src$="service-deployment-workflow.png"] { max-height: 240px; }
   /* dark backgrounds: title + part dividers, and any data-theme dark slide */
   section.layout-title::before,
   section[data-theme="dark"]::before,
@@ -610,19 +614,6 @@ MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based 
 @subtitle 200M users, 1000+ GPUs, and the limits of static Docker
 
 ---
-## Talk Overview
-
-@subtitle Shared GPU Scheduling & Proactive Autoscaling
-
-**What you'll learn:**
-
-- {icon:cpu cls=accent-primary} Integrating HAMi for vGPU virtualization
-- {icon:trending-up cls=accent-primary} Extending KEDA with custom Consumer Saturation metric
-- {icon:globe cls=accent-primary} Multi-region scaling via Helm GitOps
-
-**Concrete results:** 55% GPU waste cut, 91% faster recovery during surges.
-
----
 
 
 @layout image-right
@@ -671,39 +662,15 @@ Some filters fine-tune on a user's appearance before generating from it; others 
 
 ## The Legacy: Static Docker
 
-@subtitle Manual GPU binding, no centralized control
+@subtitle Manual GPU binding per host, and what it cost
 
 ![SNOW Legacy Docker Architecture](assets/snow/snow-legacy-docker.png)
 
-- Manual GPU binding per host
-- Local volume containers
-- Isolated Docker hosts with no centralized control
-- No sharing between GPUs  -  each pod consumed a full device
+Isolated Docker hosts with local volume containers and manual GPU binding, with no centralized control plane.
 
----
-
-## Workload Challenges
-
-@subtitle System instability, inefficiency, operational overload
-
-::: grid {cols=2}
-::: card {tag=red}
-### {icon:triangle-alert cls=accent-secondary} System Instability
-
-No centralized monitoring or recovery. Serving instability directly impacted 200M users.
-:::
-::: card {tag=yellow}
-### {icon:chart-pie cls=accent-contrast} Inefficient Utilization
-
-Static allocation caused GPU fragmentation. Resources wasted, performance unpredictable.
-:::
-:::
-
-::: card {tag=cyan}
-### {icon:hard-drive cls=accent-primary} Operational Overload
-
-No automatic recovery. Manual intervention drove up staff workload and operational costs.
-:::
+- {icon:triangle-alert cls=accent-secondary} **System instability:** no centralized monitoring or recovery, directly impacting 200M users
+- {icon:chart-pie cls=accent-contrast} **Inefficient utilization:** static allocation fragmented GPUs and wasted capacity
+- {icon:hard-drive cls=accent-primary} **Operational overload:** no automatic recovery, so manual intervention drove up cost
 
 ---
 
@@ -763,23 +730,11 @@ No automatic recovery. Manual intervention drove up staff workload and operation
 | Prometheus + Grafana | Monitoring |
 | Traefik | Ingress / reverse proxy |
 
-Multi-region on-premise HA clusters with decoupled ETCD topology for production survivability.
-
 @col
 
 ![HA Kubernetes Cluster Architecture](assets/snow/HA-kubernetes-cluster-architecture.png)
 
----
-
-@layout image-right
-
-## Helm-Based Service Deployment
-
-@subtitle Standardized deployment via GitOps
-
-![Service Deployment Workflow](assets/snow/service-deployment-workflow.png)
-
-Standardized deployment via Helm Charts. Sync between charts and clusters performed by CI/CD pipeline (GitHub Actions).
+![Helm service deployment workflow](assets/snow/service-deployment-workflow.png)
 
 ---
 
@@ -890,19 +845,6 @@ MTTR, from ~2hr to ~10min
 -85%
 GPU surge errors during peak traffic
 :::
-
----
-
-## Operational Impact
-
-@subtitle Autonomy, velocity, and headroom
-
-| Metric | Improvement |
-|--------|-------------|
-| Batch process time | -81% (~6hr → <1hr) |
-| Release cycle | 1-2 months → days |
-| Operations reclaimed | 10.8 man-months |
-| Peak traffic | 700% spike, zero downtime |
 
 ---
 

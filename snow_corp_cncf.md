@@ -30,6 +30,9 @@ style: |
      diagram full width and cap the workflow below it, so the pair fits
      instead of being centre-cropped by overflow:hidden */
   section img[src$="service-deployment-workflow.png"] { max-height: 240px; }
+  /* case study screenshot sits under the takeaway cards: leave room for
+     the link line and the footer */
+  section img[src$="cncf-case-study.png"] { max-height: 195px; }
   /* dark backgrounds: title + part dividers, and any data-theme dark slide */
   section.layout-title::before,
   section[data-theme="dark"]::before,
@@ -912,6 +915,10 @@ HAMi enables efficient GPU utilization without code changes  -  critical for mig
 Custom KEDA metrics beat reactive scaling for GPU workloads with warm-up latency. Consumer Saturation is the key metric.
 :::
 :::
+
+![CNCF case study: SNOW Corp.](assets/snow/cncf-case-study.png)
+
+Full write-up: [cncf.io/case-studies/snow-corp](https://www.cncf.io/case-studies/snow-corp/)
 
 ---
 

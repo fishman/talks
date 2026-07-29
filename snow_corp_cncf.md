@@ -31,8 +31,14 @@ style: |
      instead of being centre-cropped by overflow:hidden */
   section img[src$="service-deployment-workflow.png"] { max-height: 240px; }
   /* case study screenshot sits under the takeaway cards: leave room for
-     the link line and the footer */
-  section img[src$="cncf-case-study.png"] { max-height: 195px; }
+     the caption line and the footer */
+  section img[src$="cncf-case-study.png"] { max-height: 215px; }
+  /* caption directly after that screenshot: small and centred */
+  section p:has(img[src$="cncf-case-study.png"]) + p {
+    text-align: center;
+    font-size: 0.62em;
+    margin-top: 0.4em;
+  }
   /* dark backgrounds: title + part dividers, and any data-theme dark slide */
   section.layout-title::before,
   section[data-theme="dark"]::before,
@@ -918,7 +924,7 @@ Custom KEDA metrics beat reactive scaling for GPU workloads with warm-up latency
 
 ![CNCF case study: SNOW Corp.](assets/snow/cncf-case-study.png)
 
-Full write-up: [cncf.io/case-studies/snow-corp](https://www.cncf.io/case-studies/snow-corp/)
+Full write-up: cncf.io/case-studies/snow-corp
 
 ---
 

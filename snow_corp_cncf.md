@@ -289,7 +289,7 @@ Seven stages from pod submission to isolated GPU. The mutating webhook injects t
 
 HAMi intercepts pod creation and GPU allocation through seven stages:
 
-- **Mutating webhook:** converts GPU request to DRA ResourceClaim
+- **Mutating webhook:** detects GPU requests, routes pod to HAMi scheduler
 - **Scheduler:** selects GPU and node via HAMi scheduler plugin
 - **HAMi driver:** generates CDI spec (mounts, env vars, device nodes)
 - **Container runtime:** reads CDI spec, injects HAMi-Core library
@@ -317,11 +317,11 @@ digraph G {
   { rank=same; webhook; core }
   { rank=same; sched; workload }
 
-  pod -> webhook [label="convert to\nResourceClaim"]
+  pod -> webhook [label="set scheduler"]
   webhook -> sched [label="select GPU+node"]
   sched -> device [label="allocate device"]
 
-  device -> runtime [label="CDI spec\n(mounts, env,\ndevice nodes)" constraint=false style=dashed]
+  device -> runtime [label="CDI spec\n(mounts, env,\ndevice nodes)" constraint=false style=dashed exitX=1 exitY=0.5 entryX=0 entryY=0.5]
 
   runtime -> core [label="enforce isolation"]
   core -> workload [label="sees isolated GPU"]
@@ -616,7 +616,7 @@ Common question: why not just use MIG? MIG doesn't work on all devices. You need
 | Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
 | Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
-NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. HAMi differentiates with symbolic hijacking for sub-MIG slicing (1MB), consumable capacities for flexible resource requests, and multi-vendor support. HAMi-DRA is built on the NVIDIA DRA driver, adding CDI spec injection of the HAMi-Core library and a webhook for smoother workload integration.
+NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. HAMi differentiates with symbolic hijacking for sub-MIG slicing (1MB), consumable capacities for flexible resource requests, and multi-vendor support. HAMi-DRA supports multiple DRA drivers; the NVIDIA DRA driver in HAMi-DRA is built on NVIDIA's upstream DRA driver, with HAMi adding CDI spec injection of the HAMi-Core library and a webhook for smoother workload integration.
 
 
 ---
@@ -976,24 +976,28 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 @layout metrics
 ## Where HAMi Is Today
 
-@subtitle HAMi in Production: 7 case studies, more coming
+@subtitle Production metrics from CNCF case studies
 
 ::: grid {cols=4}
 ::: card {metric}
-3x
-GPU density
+100%
+Hardware pool utilization
+Baike Holdings
 :::
 ::: card {metric}
 10x
-Workloads per device
+GPU utilization in CI
+NIO
 :::
 ::: card {metric}
-80%
-Less ops overhead
+30%
+Fewer GPU hours
+China Merchants Bank
 :::
 ::: card {metric}
-2x
-GPU utilization
+10,000+
+Pods running concurrently
+Baike Holdings
 :::
 :::
 

@@ -533,7 +533,7 @@ Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU
 - **Node spread** isolates faults: HA across zones, blast radius control
 - **GPU binpack** prevents fragmentation: frees entire GPUs for training
 - **GPU spread** protects tail latency: reduces HBM and NVLink contention
-- Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn or Volcano
+- Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn
 
 ---
 
@@ -570,13 +570,14 @@ Common question: why not just use MIG? MIG doesn't work on all devices. You need
 
 | Capability | MIG | HAMi | HAMi+DRA | NVIDIA DRA |
 |------------|:---:|:---:|:---:|:---:|
-| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Symbolic hijacking (1MB slice) | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Pre-configured templates | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
+| Dynamic MIG repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
+| Symbolic hijacking | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
+| Consumable capacities | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
 | Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
 | Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
-MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based on workload, and also uses symbolic hijacking for slices as small as 1MB. NVIDIA DRA is MIG-only: no repartitioning, no hijacking, no multi-vendor, no advanced scheduling (yet).
+NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. HAMi differentiates with symbolic hijacking for sub-MIG slicing (1MB), consumable capacities for flexible resource requests, and multi-vendor support. HAMi-DRA is built on the NVIDIA DRA driver, adding CDI spec injection of the HAMi-Core library and a webhook for smoother workload integration.
 
 ---
 

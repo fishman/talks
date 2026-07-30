@@ -864,7 +864,7 @@ GPU surge errors during peak traffic
 
 @subtitle Ghibli Filter traffic surge handled with zero downtime
 
-![Real-world Validation](assets/snow/snow_kubecon.drawio_ghibli.png)
+![Real-world Validation](assets/snow/ghibli-surge-validation.png)
 
 During the viral "Ghibli Filter" trend:
 - Traffic tripled in 3 hours on a low-staff Saturday

@@ -289,10 +289,10 @@ Seven stages from pod submission to isolated GPU. The mutating webhook injects t
 
 HAMi intercepts pod creation and GPU allocation through seven stages:
 
-- **Mutating webhook:** injects device request into pod spec
+- **Mutating webhook:** converts GPU request to DRA ResourceClaim
 - **Scheduler:** selects GPU and node via HAMi scheduler plugin
-- **Device plugin:** allocates GPU memory and compute cores
-- **Container runtime:** injects HAMi-Core library into container
+- **HAMi driver:** generates CDI spec (mounts, env vars, device nodes)
+- **Container runtime:** reads CDI spec, injects HAMi-Core library
 - **HAMi core:** enforces isolation in-process via symbolic hijacking
 
 @col
@@ -307,7 +307,7 @@ digraph G {
   pod [label="Pod submitted" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
   webhook [label="Mutating webhook" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
   sched [label="Scheduler" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
-  device [label="Device plugin" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  device [label="HAMi driver" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
 
   runtime [label="Container runtime" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
   core [label="HAMi core" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
@@ -317,11 +317,11 @@ digraph G {
   { rank=same; webhook; core }
   { rank=same; sched; workload }
 
-  pod -> webhook [label="inject request"]
+  pod -> webhook [label="convert to\nResourceClaim"]
   webhook -> sched [label="select GPU+node"]
-  sched -> device [label="allocate\nmem/cores"]
+  sched -> device [label="allocate device"]
 
-  device -> runtime [label="inject lib" constraint=false style=dashed]
+  device -> runtime [label="CDI spec\n(mounts, env,\ndevice nodes)" constraint=false style=dashed]
 
   runtime -> core [label="enforce isolation"]
   core -> workload [label="sees isolated GPU"]

@@ -12,6 +12,7 @@ style: |
      background is redeclared here as two layers (user style wins). */
   :root {
     --logo-snow: url("assets/brand/snow-logo-long.png");
+    --logo-snow-white: url("assets/brand/snow-logo-white.png");
     --logo-dynamia: url("assets/brand/dynamia-logo.svg");
     --logo-dynamia-white: url("assets/brand/dynamia-logo-white.png");
   }
@@ -22,12 +23,28 @@ style: |
       var(--logo-snow) left center / auto 46% no-repeat,
       var(--logo-dynamia) right center / auto 58% no-repeat;
   }
+  /* dashboard screenshot: base.css caps images at 70% of slide height.
+     Let this one use the full space between subtitle and footer. */
+  section img[src$="monitoring-dashboards.png"] { max-height: 548px; }
+  /* two stacked figures share one 462px column. Keep the architecture
+     diagram full width and cap the workflow below it, so the pair fits
+     instead of being centre-cropped by overflow:hidden */
+  section img[src$="service-deployment-workflow.png"] { max-height: 240px; }
+  /* case study screenshot sits under the takeaway cards: leave room for
+     the caption line and the footer */
+  section img[src$="cncf-case-study.png"] { max-height: 215px; }
+  /* caption directly after that screenshot: small and centred */
+  section p:has(img[src$="cncf-case-study.png"]) + p {
+    text-align: center;
+    font-size: 0.62em;
+    margin-top: 0.4em;
+  }
   /* dark backgrounds: title + part dividers, and any data-theme dark slide */
   section.layout-title::before,
   section[data-theme="dark"]::before,
   [data-theme="dark"] section::before {
     background:
-      var(--logo-snow) left center / auto 46% no-repeat,
+      var(--logo-snow-white) left center / auto 46% no-repeat,
       var(--logo-dynamia-white) right center / auto 58% no-repeat;
   }
 ---
@@ -601,22 +618,9 @@ MIG needs preconfigured GPU profiles. HAMi creates dynamic MIG partitions based 
 
 
 ---
-# Part 3: Legacy & Migration
+# Part 3: SNOW Corp. at Scale
 
-@subtitle Static Docker, GPU fragmentation, operational overload
-
----
-## Talk Overview
-
-@subtitle Shared GPU Scheduling & Proactive Autoscaling
-
-**What you'll learn:**
-
-- {icon:cpu cls=accent-primary} Integrating HAMi for vGPU virtualization
-- {icon:trending-up cls=accent-primary} Extending KEDA with custom Consumer Saturation metric
-- {icon:globe cls=accent-primary} Multi-region scaling via Helm GitOps
-
-**Concrete results:** 55% GPU waste cut, 91% faster recovery during surges.
+@subtitle 200M users, 1000+ GPUs, and the limits of static Docker
 
 ---
 
@@ -657,33 +661,8 @@ Viral AI trends such as the Ghibli Filter trigger unpredictable surges up to 700
 ::: card {tag=yellow}
 ### {icon:layers cls=accent-contrast} Heterogeneous Inference Workflows
 
-A diverse filter lineup mixes compute-heavy and memory-intensive work, so one-size-fits-all allocation is inefficient.
+Some filters fine-tune on a user's appearance before generating from it; others are inference only. Mixed pipeline shapes and resource profiles make one-size-fits-all allocation inefficient.
 :::
-:::
-
----
-
-## Workload Challenges
-
-@subtitle System instability, inefficiency, operational overload
-
-::: grid {cols=2}
-::: card {tag=red}
-### {icon:triangle-alert cls=accent-secondary} System Instability
-
-No centralized monitoring or recovery. Serving instability directly impacted 200M users.
-:::
-::: card {tag=yellow}
-### {icon:chart-pie cls=accent-contrast} Inefficient Utilization
-
-Static allocation caused GPU fragmentation. Resources wasted, performance unpredictable.
-:::
-:::
-
-::: card {tag=cyan}
-### {icon:hard-drive cls=accent-primary} Operational Overload
-
-No automatic recovery. Manual intervention drove up staff workload and operational costs.
 :::
 
 ---
@@ -692,14 +671,15 @@ No automatic recovery. Manual intervention drove up staff workload and operation
 
 ## The Legacy: Static Docker
 
-@subtitle Manual GPU binding, no centralized control
+@subtitle Manual GPU binding per host, and what it cost
 
 ![SNOW Legacy Docker Architecture](assets/snow/snow-legacy-docker.png)
 
-- Manual GPU binding per host
-- Local volume containers
-- Isolated Docker hosts with no centralized control
-- No sharing between GPUs  -  each pod consumed a full device
+Isolated Docker hosts with local volume containers and manual GPU binding, with no centralized control plane.
+
+- {icon:triangle-alert cls=accent-secondary} **System instability:** no centralized monitoring or recovery, directly impacting 200M users
+- {icon:chart-pie cls=accent-contrast} **Inefficient utilization:** static allocation fragmented GPUs and wasted capacity
+- {icon:hard-drive cls=accent-primary} **Operational overload:** no automatic recovery, so manual intervention drove up cost
 
 ---
 
@@ -759,23 +739,11 @@ No automatic recovery. Manual intervention drove up staff workload and operation
 | Prometheus + Grafana | Monitoring |
 | Traefik | Ingress / reverse proxy |
 
-Multi-region on-premise HA clusters with decoupled ETCD topology for production survivability.
-
 @col
 
 ![HA Kubernetes Cluster Architecture](assets/snow/HA-kubernetes-cluster-architecture.png)
 
----
-
-@layout image-right
-
-## Helm-Based Service Deployment
-
-@subtitle Standardized deployment via GitOps
-
-![Service Deployment Workflow](assets/snow/service-deployment-workflow.png)
-
-Standardized deployment via Helm Charts. Sync between charts and clusters performed by CI/CD pipeline (GitHub Actions).
+![Helm service deployment workflow](assets/snow/service-deployment-workflow.png)
 
 ---
 
@@ -820,8 +788,6 @@ SNOW's inference fleet is heterogeneous, so utilization and saturation are not t
 ### {icon:chart-pie cls=accent-secondary} Inaccurate Saturation Signal
 
 CPU and RAM miss real service load. Even DCGM GPU utilization is unreliable: varying workflow intensities mean high utilization does not imply saturation, and vice versa.
-
-Training runs near 80% compute and 20% memory. Inference has the opposite profile.
 :::
 ::: card {tag=yellow}
 ### {icon:clock cls=accent-contrast} Lagging Indicator
@@ -891,31 +857,6 @@ GPU surge errors during peak traffic
 
 ---
 
-## Operational Impact
-
-@subtitle Autonomy, velocity, and headroom
-
-| Metric | Improvement |
-|--------|-------------|
-| Batch process time | -81% (~6hr → <1hr) |
-| Release cycle | 1-2 months → days |
-| Operations reclaimed | 10.8 man-months |
-| Peak traffic | 700% spike, zero downtime |
-
----
-
-@layout image-right
-
-## Error Reduction: Before vs After
-
-@subtitle 85 percent drop in GPU surge errors
-
-![KEDA Error Count GPU Surges](assets/snow/keda-error-count-gpu-surges.png)
-
-GPU surge-related user errors dropped 85% after KEDA-based GPU orchestration deployed (May 2025).
-
----
-
 @variant dark
 @layout image-left
 
@@ -923,7 +864,7 @@ GPU surge-related user errors dropped 85% after KEDA-based GPU orchestration dep
 
 @subtitle Ghibli Filter traffic surge handled with zero downtime
 
-![Real-world Validation](assets/snow/snow_kubecon.drawio_ghibli.png)
+![Real-world Validation](assets/snow/ghibli-surge-validation.png)
 
 During the viral "Ghibli Filter" trend:
 - Traffic tripled in 3 hours on a low-staff Saturday
@@ -953,15 +894,9 @@ To overcome on-premise capacity limits, the system expanded into Cloud Service P
 
 ---
 
-@layout image-right
-
 ## GPU Monitoring Dashboard
 
-@subtitle Full fleet visibility
-
-![GPU Monitoring Dashboard](assets/snow/gpu-monitoring-dashboard.png)
-
-Full visibility into GPU utilization, scheduling, and autoscaling across the entire fleet.
+![GPU cluster and traffic dashboards](assets/snow/monitoring-dashboards.png)
 
 ---
 
@@ -986,6 +921,10 @@ HAMi enables efficient GPU utilization without code changes  -  critical for mig
 Custom KEDA metrics beat reactive scaling for GPU workloads with warm-up latency. Consumer Saturation is the key metric.
 :::
 :::
+
+![CNCF case study: SNOW Corp.](assets/snow/cncf-case-study.png)
+
+Full write-up: cncf.io/case-studies/snow-corp
 
 ---
 

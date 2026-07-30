@@ -77,7 +77,7 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 
 - GPUs are scarce, allocated whole
 - Vendors locked in, supply tight
-- Utilization stuck at ~30%
+- Utilization stuck at 10%
 - No central observability
 - Fragmented inference workloads
 :::
@@ -91,8 +91,9 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 ### Requirements
 
 - Hardware agnostic: one API, any accelerator
-- Fractional GPU: 1MB slices, multiple tasks per device
+- Fractional GPU: fine-grained slices, multiple tasks per device
 - Advanced scheduling: binpack, spread, topology-aware
+- Unified observability across vendors
 :::
 
 <!--
@@ -213,10 +214,10 @@ Seven stages from pod submission to isolated GPU. The mutating webhook injects t
 
 HAMi intercepts pod creation and GPU allocation through seven stages:
 
-- **Mutating webhook:** injects device request into pod spec
-- **Scheduler:** selects GPU and node via HAMi scheduler plugin
-- **Device plugin:** allocates GPU memory and compute cores
-- **Container runtime:** injects HAMi-Core library into container
+- **Mutating webhook:** detects GPU requests, routes pod to HAMi scheduler
+- **Scheduler:** selects GPU and node via HAMi scheduler extender
+- **HAMi driver:** generates device config
+- **Container runtime:** reads config, injects HAMi-Core library
 - **HAMi core:** enforces isolation in-process via symbolic hijacking
 
 @col
@@ -231,7 +232,7 @@ digraph G {
   pod [label="Pod submitted" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
   webhook [label="Mutating webhook" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
   sched [label="Scheduler" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
-  device [label="Device plugin" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  device [label="HAMi driver" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
 
   runtime [label="Container runtime" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
   core [label="HAMi core" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
@@ -241,11 +242,11 @@ digraph G {
   { rank=same; webhook; core }
   { rank=same; sched; workload }
 
-  pod -> webhook [label="inject request"]
+  pod -> webhook [label="set scheduler"]
   webhook -> sched [label="select GPU+node"]
-  sched -> device [label="allocate\nmem/cores"]
+  sched -> device [label="allocate device"]
 
-  device -> runtime [label="inject lib" constraint=false style=dashed]
+  device -> runtime [label="device config" constraint=false style=dashed exitX=1 exitY=0.5 entryX=0 entryY=0.5]
 
   runtime -> core [label="enforce isolation"]
   core -> workload [label="sees isolated GPU"]
@@ -577,7 +578,7 @@ Common question: why not just use MIG? MIG doesn't work on all devices. You need
 | Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
 | Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} | {icon:x cls=accent-secondary} |
 
-NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. HAMi differentiates with symbolic hijacking for sub-MIG slicing (1MB), consumable capacities for flexible resource requests, and multi-vendor support. HAMi-DRA is built on the NVIDIA DRA driver, adding CDI spec injection of the HAMi-Core library and a webhook for smoother workload integration.
+NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. HAMi differentiates with symbolic hijacking for sub-MIG slicing (1MB), consumable capacities for flexible resource requests, and multi-vendor support. HAMi-DRA supports multiple DRA drivers. Its NVIDIA driver builds on NVIDIA's upstream, adding consumable capacities.
 
 ---
 
@@ -1132,24 +1133,28 @@ Multiple small models (embedding, reranker, generator) share GPUs. 4 threads →
 @layout metrics
 ## Where We Are Today
 
-@subtitle HAMi in Production: 7 case studies, more coming
+@subtitle Production metrics from CNCF case studies
 
 ::: grid {cols=4}
 ::: card {metric}
-3x
-GPU density
+100%
+Hardware pool utilization
+Baike Holdings
 :::
 ::: card {metric}
 10x
-Workloads per device
+GPU utilization in CI
+NIO
 :::
 ::: card {metric}
-80%
-Less ops overhead
+30%
+Fewer GPU hours
+China Merchants Bank
 :::
 ::: card {metric}
-2x
-GPU utilization
+10,000+
+Pods running concurrently
+Baike Holdings
 :::
 :::
 

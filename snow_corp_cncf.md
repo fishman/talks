@@ -40,6 +40,16 @@ style: |
     font-size: 0.62em;
     margin-top: 0.4em;
   }
+  /* Presenter view only, and only while a Part 3 to 5 slide (17 to 34) is
+     active: those notes hold the full spoken script, so the pane text is
+     shrunk enough to avoid scrolling mid-sentence. Every other slide,
+     including the HAMi sections, keeps the default 20pt. The range is
+     positional, so it needs updating if slides are added before Part 3.
+     Never seen by the audience. */
+  html.presenter #pres-main:has(> section.active:nth-child(n+17):nth-child(-n+34)) ~ #pres-notes {
+    font-size: 13.5pt;
+    line-height: 1.45;
+  }
   /* dark backgrounds: title + part dividers, and any data-theme dark slide */
   section.layout-title::before,
   section[data-theme="dark"]::before,
@@ -625,6 +635,11 @@ NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. 
 
 @subtitle 200M users, 1000+ GPUs, and the limits of static Docker
 
+<!--
+Thanks Reza. So that is HAMi as a project. I want to spend the next fifteen
+minutes on what happened when we actually put it into production, at SNOW.
+-->
+
 ---
 
 
@@ -633,6 +648,24 @@ NVIDIA DRA supports MIG, MPS, and VFIO passthrough with dynamic repartitioning. 
 ## The Challenge at Scale
 
 @subtitle 200M Users, 1000+ GPUs, 1200+ Workflows
+
+<!--
+A quick word on who we are, because the scale is what makes this hard.
+
+SNOW Corp. is a subsidiary of NAVER. We run three GenAI camera apps: SNOW,
+EPIK and B612. Together they serve about 200 million users, and behind them
+we operate more than a thousand A100 GPUs running over twelve hundred
+workflows.
+
+All three apps landed in a16z's Top 50 GenAI mobile apps. We are the number
+one camera app in Korea, Japan and Vietnam, with more than 1.5 billion
+cumulative downloads.
+
+[Point at the right-hand chart] And this is the shape of the problem. That
+is our AI filter usage through 2024. Notice it is not a smooth curve. Our
+traffic is driven by trends, and trends are not something you can capacity
+plan for.
+-->
 
 SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users across three top-ranked GenAI applications  -  SNOW, EPIK, B612  -  handling extreme traffic volatility from viral AI trends.
 
@@ -649,6 +682,27 @@ SNOW Corp., subsidiary of NAVER, manages 1000+ A100 GPUs serving 200M users acro
 ## Three Workload Challenges
 
 @subtitle Continuous evolution, traffic volatility, heterogeneous workflows
+
+<!--
+That scale gave us three specific problems.
+
+First, continuous service evolution. Staying number one means shipping new
+filters constantly. So the infrastructure has to absorb frequent model
+deployments without taking the service down.
+
+Second, extreme traffic volatility. When a trend goes viral, and the Ghibli
+filter is the example I will come back to, traffic can spike 700 percent.
+Static capacity planning simply does not survive that.
+
+Third, and this is the one that shaped our architecture: heterogeneous
+workflows. Some of our filters fine-tune on the user's own appearance first,
+and then generate images from that fine-tuned model. Others are pure
+inference. So we are not running one workload shape, we are running several,
+with very different resource profiles.
+
+[Beat] That last point is why handing every workload an identical whole GPU
+was never going to work for us.
+-->
 
 ::: grid {cols=3}
 ::: card {tag=cyan}
@@ -676,6 +730,22 @@ Some filters fine-tune on a user's appearance before generating from it; others 
 
 @subtitle Manual GPU binding per host, and what it cost
 
+<!--
+Here is where we started. Isolated Docker hosts. Local volume containers.
+GPUs bound to hosts by hand. No centralized control plane anywhere.
+
+It worked, until it did not. Three things hurt.
+
+System instability. With no central monitoring or recovery, a failure
+stayed a failure until a human noticed. At 200 million users, that is felt.
+
+Inefficient utilization. Static allocation fragmented our GPUs. We were
+paying for capacity we could not reach.
+
+Operational overload. Nothing recovered automatically, so every incident
+was manual. That is engineers doing work a scheduler should be doing.
+-->
+
 ![SNOW Legacy Docker Architecture](assets/snow/snow-legacy-docker.png)
 
 Isolated Docker hosts with local volume containers and manual GPU binding, with no centralized control plane.
@@ -692,6 +762,17 @@ Isolated Docker hosts with local volume containers and manual GPU binding, with 
 ## Infrastructure Evolution
 
 @subtitle From Docker silos to Kubernetes + HAMi
+
+<!--
+So the direction was clear. Off isolated Docker hosts, onto Kubernetes.
+
+From manual GPU binding to a centralized control plane. From isolated hosts
+to dynamic node pools. From static allocation to vGPU sharing. And from
+manual intervention to automated recovery and scaling.
+
+That is the target state. The rest of my time is how we actually got there,
+and the one thing that nearly stopped us.
+-->
 
 ::: card {tag=compare}
 ### AS-IS: Legacy Docker
@@ -724,6 +805,10 @@ Isolated Docker hosts with local volume containers and manual GPU binding, with 
 
 @subtitle How SNOW Fixed It
 
+<!--
+So, how we fixed it.
+-->
+
 ---
 
 @layout image-right
@@ -731,6 +816,22 @@ Isolated Docker hosts with local volume containers and manual GPU binding, with 
 ## Building a Cloud-Native Foundation
 
 @subtitle Multi-region on-premise HA with decoupled ETCD
+
+<!--
+We did not build this ourselves. Almost all of it is CNCF ecosystem.
+
+Kubernetes for orchestration. Cilium as a high-performance CNI. HAMi as the
+GPU sharing scheduler. KEDA for autoscaling. Helm for service configuration.
+Prometheus and Grafana for monitoring. Traefik for ingress.
+
+[Point at the top diagram] Architecturally, multi-region on-premise HA
+clusters, with the ETCD topology decoupled. That decoupling matters: it is
+what lets a production cluster survive on its own.
+
+[Point at the lower diagram] And every service ships as a Helm chart,
+synced to every cluster by GitHub Actions. One chart, different values per
+region. That becomes important at the end of the talk.
+-->
 
 | Project | Role |
 |---------|------|
@@ -754,6 +855,25 @@ Isolated Docker hosts with local volume containers and manual GPU binding, with 
 
 @subtitle Train-to-Inference pipeline blocked by GPU isolation
 
+<!--
+Now the problem that nearly stopped the migration.
+
+One of our core features runs a sequential pipeline: fine-tune, then infer.
+Two engines, one after the other, as two containers in the same pod.
+
+Under Docker, that was fine. Both containers could reach the same GPU.
+
+[Beat] Kubernetes will not do that. The default scheduler treats a GPU as
+atomic: one device, one container. It could not give that pod one GPU shared
+between two containers.
+
+So we had two options, and both were bad. Either give each container its own
+GPU, and double our GPU count for the same work. Or rewrite the feature to
+collapse both engines into a single process.
+
+We did not want to pay either price.
+-->
+
 Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pipeline.
 
 ![Sequential Train-to-Inference Pipeline](assets/snow/sequential-train-to-inference.png)
@@ -770,6 +890,23 @@ Kubernetes' strict GPU isolation blocked the sequential "Train-to-Inference" pip
 
 @subtitle Device sharing without code changes
 
+<!--
+HAMi is what unblocked it.
+
+Device sharing: multiple containers share one physical GPU concurrently.
+That is exactly the capability Kubernetes took away from us.
+
+Zero code changes: we installed it with Helm and assigned GPUs in the
+chart. Our application code did not change at all. For a migration, that is
+the difference between a quarter of work and an afternoon.
+
+Kubernetes-native: it runs alongside the existing kube-scheduler. It did
+not conflict with the rest of our stack, including autoscaling.
+
+The result: we got Docker-level scheduling flexibility back, inside
+Kubernetes, with better utilization and better stability.
+-->
+
 ![HAMi GPU Allocation Feature](assets/snow/hami-gpu-allocation-feature.png)
 
 - **Device sharing:** Multiple containers share one GPU concurrently
@@ -783,6 +920,26 @@ Result: flexible GPU scheduling comparable to Docker, with enhanced utilization 
 ## Proactive GPU Orchestration
 
 @subtitle Why conventional metrics miss GPU saturation
+
+<!--
+Sharing solved allocation. It did not solve scaling. This is the part I think
+is most transferable.
+
+The question is: how do you know when to add GPUs? And it turns out the
+obvious signals are all wrong.
+
+Inaccurate saturation signal. CPU and RAM tell you nothing about GPU
+service load. And even DCGM GPU utilization is unreliable for us, because our
+workflows vary so much in intensity. High utilization does not mean we are
+saturated. Low utilization does not mean we have headroom.
+
+Lagging indicator. KEDA ships a RabbitMQ scaler that triggers on queue
+length. But queue length only grows once you are already behind. Our models
+need about sixty seconds to warm up. So by the time the queue tells you to
+scale, you are throttling requests for a full minute.
+
+We needed a signal that fires *before* saturation, not after.
+-->
 
 SNOW's inference fleet is heterogeneous, so utilization and saturation are not the same signal.
 
@@ -809,6 +966,23 @@ With a 60 second model warm-up, that is already too late: requests are throttled
 
 @subtitle Consumer Saturation: unacked messages / active consumers
 
+<!--
+So we built one. A lightweight Python metric server that exposes real-time
+RabbitMQ consumer state to the Kubernetes HPA, through KEDA's Metrics API.
+
+The metric is what we call Consumer Saturation: unacknowledged messages
+divided by active consumers. Unacked messages are effectively busy workers,
+so that ratio tells you what fraction of your pool is actually occupied.
+
+[Point at the diagram] We scale out above 0.7. Not at 1.0, at 0.7. That
+gap is deliberate: it provisions GPUs while there is still headroom, and that
+buffer is what absorbs the sixty second warm-up.
+
+One practical note if you try this: we also lengthened the stabilization and
+cooldown windows. Otherwise a brief lull tears down workers you are about to
+need again.
+-->
+
 SNOW built a lightweight Python metric server that exposes real-time RabbitMQ consumer state to the Kubernetes HPA through KEDA's Metrics API.
 
 - {icon:calculator cls=accent-primary} `active_ratio = unacked / consumers`, scaling out above a **0.7** threshold
@@ -825,6 +999,19 @@ SNOW built a lightweight Python metric server that exposes real-time RabbitMQ co
 
 @subtitle GPU allocation tracks real-time user traffic
 
+<!--
+This is the before and after.
+
+[Point left] Before, static provisioning. The orange region is wasted GPU
+time: we are holding more GPU than traffic needs. And even while
+over-provisioned, look at the red at the start, we still dropped spikes,
+because static capacity cannot follow a trend.
+
+[Point right] After. GPU allocation tracks real traffic. The green region
+is GPU time we are actually using. Same infrastructure, very different
+efficiency.
+-->
+
 ![Impact of proactive autoscaling on GPU efficiency](assets/snow/proactive-autoscaling-impact.png)
 
 Static provisioning burns **wasted GPU time** when supply sits above traffic (orange), and still drops **unserved spikes** (red). After autoscaling, allocation tracks demand closely (green).
@@ -835,11 +1022,32 @@ Static provisioning burns **wasted GPU time** when supply sits above traffic (or
 
 @subtitle What SNOW Achieved
 
+<!--
+So what did that buy us.
+-->
+
 ---
 
 ## Quantitative Results
 
 @subtitle Fewer GPUs, less idle time, faster recovery
+
+<!--
+Four numbers.
+
+Two times fewer GPUs for our train-plus-inference pipelines. That is HAMi
+sharing directly: the pipeline that would have needed two GPUs now needs one.
+
+55 percent less average GPU time per production cluster, from proactive
+autoscaling.
+
+91 percent faster recovery. MTTR went from around two hours to around ten
+minutes. That is the centralized control plane and automated recovery.
+
+85 percent fewer GPU surge errors during peak traffic. That is the
+proactive scaling threshold doing its job, and it is the number our users
+actually felt.
+-->
 
 ::: card {metric}
 2x
@@ -867,6 +1075,24 @@ GPU surge errors during peak traffic
 
 @subtitle Ghibli Filter traffic surge handled with zero downtime
 
+<!--
+And then we got tested for real.
+
+The Ghibli style trend went viral. Demand for our Ghibli filter tripled
+within three hours, on a Saturday morning, with a skeleton team on call.
+
+Autoscaling held, at first. Then we saturated the GPUs we physically had
+on-premise. At that point no scaling policy helps, because there is nothing
+left to scale into.
+
+So we burst into cloud provider clusters. And because every service was
+already a Helm chart deployed by GitOps, that expansion was a values change,
+not a new deployment pipeline.
+
+[Beat] We ended up serving seven times peak load, with zero service
+interruption. On a Saturday.
+-->
+
 ![Real-world Validation](assets/snow/ghibli-surge-validation.png)
 
 During the viral "Ghibli Filter" trend:
@@ -885,6 +1111,19 @@ Achieved 7x peak consumption without service interruption.
 
 @subtitle One GitOps pipeline across on-premise and CSP regions
 
+<!--
+Briefly, how that works.
+
+Identical Helm charts go to every cluster through GitOps. Regions A and B are
+our on-premise clusters; C and D are cloud provider clusters we burst into.
+
+[Point at the diagram] The key detail is on the left: the cloud worker
+nodes consume from the same central RabbitMQ, over a secured connection. So a
+worker in a cloud region is pulling from exactly the same queue as a worker in
+our own data centre. Nothing in the application needs to know where it is
+running.
+-->
+
 To overcome on-premise capacity limits, the system expanded into Cloud Service Provider regions.
 
 - {icon:git-branch cls=accent-primary} Identical Helm charts deployed to every cluster via GitOps
@@ -899,6 +1138,23 @@ To overcome on-premise capacity limits, the system expanded into Cloud Service P
 
 ## GPU Monitoring Dashboard
 
+<!--
+None of this is operable without visibility, so briefly, this is what we watch.
+
+[Point top] Top half is the GPU cluster view: pod counts and GPU totals per
+namespace.
+
+[Point bottom] Bottom half is the traffic and worker view: workers, queue
+depth, unacknowledged messages.
+
+[Beat] And it is the bottom half I would underline. Consumer Saturation, the
+metric driving every scaling decision I just described, is not on a GPU
+dashboard at all. It comes from the queue.
+
+If you take one operational lesson from this talk, that is it. For GPU
+workloads, instrument the queue, not just the device.
+-->
+
 ![GPU cluster and traffic dashboards](assets/snow/monitoring-dashboards.png)
 
 ---
@@ -906,6 +1162,29 @@ To overcome on-premise capacity limits, the system expanded into Cloud Service P
 ## Key Takeaways
 
 @subtitle Production blueprint, GPU sharing, proactive scaling
+
+<!--
+Three things to take away.
+
+A production blueprint. We did not build a bespoke GPU platform. The CNCF
+ecosystem gave us a production-grade foundation, and HAMi plus KEDA is now
+proven at 200 million users.
+
+GPU sharing. HAMi gave us efficient GPU utilization with no application
+code changes. If you are migrating off a legacy Docker setup, that property is
+what makes the migration affordable.
+
+Proactive scaling. For GPU workloads with warm-up latency, reactive
+scaling is structurally too late. A custom metric that fires before saturation
+beats a better-tuned lagging one. For us that metric was Consumer Saturation.
+
+[Point at the screenshot] And I have compressed a lot into fifteen minutes.
+All of this is written up properly as a CNCF case study, published on cncf.io
+— the full architecture, the numbers, and the parts I skipped. If you want the
+detail, that is the place: cncf.io slash case-studies slash snow-corp.
+
+[Hand off] Thank you. Reza is going to close on where HAMi is today.
+-->
 
 ::: grid {cols=3}
 ::: card {tag=green}

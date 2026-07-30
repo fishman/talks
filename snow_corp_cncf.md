@@ -5,6 +5,7 @@ logo: assets/brand/snow-logo-long.png
 logo_dark: assets/brand/snow-logo-long.png
 watermark: assets/brand/kubecon_japan/cncf_logo.svg
 footer: Shared GPU Scheduling & Proactive Autoscaling - KubeCon CloudNativeCon Japan 2026
+transition: fade
 paginate: true
 style: |
   /* Two brand marks top-right: SNOW first, Dynamia second.

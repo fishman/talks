@@ -66,12 +66,13 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 
 ## The GPU Challenge
 
-@subtitle What breaks, what HAMi solves
+@subtitle What breaks, what HAMi needs to solve
 
 ::: card {tag=compare}
 ### Problem
 
 - GPUs are scarce, allocated whole
+- Vendors locked in, supply tight
 - Utilization stuck at 10%
 - No central observability
 - Fragmented inference workloads
@@ -85,21 +86,155 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 ::: card {tag=compare}
 ### Requirements
 
-- One API, any accelerator
-- Fine-grained slices, many tasks per device
-- Advanced scheduling: binpack, spread, topology
+- Hardware agnostic: one API, any accelerator
+- Fractional GPU: fine-grained slices, multiple tasks per device
+- Advanced scheduling: binpack, spread, topology-aware
 - Unified observability across vendors
 :::
 
 <!--
-Heterogeneous GPU sharing means one cluster can run NVIDIA, Ascend, Cambricon and other devices without manual partitioning. HAMi handles the scheduling. The real work is memory isolation, which we cover next.
+Heterogeneous GPU sharing means you can run NVIDIA A100s, H100s, Ascend or other devices on the same cluster without manual partitioning. HAMi handles the scheduling logic. The real work is memory isolation.
 -->
+
+::: notes{ tag="green" }
+Unified observability, 50% GPU utilization, 10x workloads running, 10x GPU availability. AMD MI355X: 80% of B200 perf at ~1/3 the cost. Not everyone needs Vera Rubin.
+:::
+
+
+@layout compare
+
 
 ---
 
-# Part 2: The Architecture
+# Part 2: The Solution
 
 @subtitle No code changes. No kernel modules. No vendor lock-in.
+
+---
+
+## DRA Feature Timeline
+
+@subtitle KEPs and their development status: not covered today
+
+<!--
+Backup slide. Shows all DRA KEPs and their dev status. Mention that DRA is moving fast -- 1.34 stable. We will skip this but it is here for questions.
+-->
+
+![DRA Feature Timeline](assets/hami/dra-feature-timeline.png)
+
+---
+
+@layout image-right
+
+## DRA: ResourceSlice
+
+@subtitle Per-node device inventory
+
+<!--
+DRA drivers run on each node and publish available devices. The scheduler reads ResourceSlices to find nodes that can satisfy a claim. This is how the scheduler knows what hardware is free.
+-->
+
+![ResourceSlice](assets/hami/dra-resource-slice.png)
+
+- **ResourceSlice:** lists all available devices on a node with their attributes
+- DRA drivers publish slices; scheduler reads them to match claims to devices
+- Tied to a node via `nodeName`, supports topology and NUMA attributes
+
+---
+
+@layout image-right
+
+## DRA: ResourceClaim
+
+@subtitle A standardized way to request hardware: not just GPUs. Stable in K8s 1.34.
+
+<!--
+DeviceClass defines a category of devices by capability. ResourceClaim requests specific hardware from that category. ResourceClaimTemplate creates a claim per pod automatically. Together these replace the old device plugin model.
+-->
+
+![ResourceClaim and ResourceClaimTemplate](assets/hami/dra-resource-claim.png)
+
+- **DeviceClass:** groups devices with identical resource models. **ResourceClaim:** a workload's ticket to hardware. **ResourceClaimTemplate:** reusable blueprint, auto-creates a claim per Pod.
+
+---
+
+## HAMi Capabilities
+
+@subtitle Six things HAMi brings to GPU scheduling
+
+<!--
+Six capabilities. The key ones for this talk: hard isolation, advanced scheduling, and unified monitoring. Heterogeneous management is the differentiator -- not just NVIDIA.
+-->
+
+::: grid {cols=2}
+::: card
+### {icon:layers cls=accent-primary} Heterogeneous Management
+
+Manage GPU, NPU, MLU, and other accelerators in one workflow.
+:::
+::: card
+### {icon:shield-check cls=accent-primary} Hard Isolation
+
+Slice memory and compute with hard isolation at runtime.
+:::
+::: card
+### {icon:git-branch cls=accent-contrast} Advanced Scheduling
+
+Binpack, spread, and topology-aware placement policies.
+:::
+::: card
+### {icon:box cls=accent-primary} Kubernetes Native
+
+Kubernetes-native APIs, DRA, and CDI support.
+:::
+::: card
+### {icon:gauge cls=accent-primary} Resource Isolation & QoS
+
+Memory and core quotas for fair, stable sharing.
+:::
+::: card
+### {icon:chart-bar cls=accent-contrast} Unified Monitoring
+
+Consistent metrics and visibility across vendors.
+:::
+:::
+
+---
+
+@layout two-col
+
+## GPU Sharing
+
+@subtitle Dynamic fine-grained device slicing
+
+<!--
+Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
+-->
+
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
+- **Fine-grained:** as small as 1MB device memory, 1% computing cores
+- **Transparent to tasks:** no code changes required
+- **Hard resource isolation** inside containers
+- One API across vendors: same YAML, any accelerator
+
+@col
+
+```yaml
+# Ascend 910C: 8GB + 20% compute
+resources:
+  limits:
+    huawei.com/Ascend910C: "1"
+    huawei.com/Ascend910C-core: "20"
+    huawei.com/Ascend910C-memory: "8192"
+```
+
+```yaml
+# NVIDIA: 3GB on any GPU
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 3000
+```
 
 ---
 
@@ -254,68 +389,61 @@ HAMi differentiates with symbolic hijacking (1 MiB granularity on NVIDIA), consu
 
 ## Scheduling Policies
 
-@subtitle Binpack & spread, on nodes and GPUs
+@subtitle Binpack & Spread
 
 <!--
-Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread protects tail latency. Pick based on workload.
+Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU binpack saves whole GPUs for training, GPU spread saves tail latency. Pick based on workload: training wants binpack, inference with SLOs wants spread.
 -->
 
 ![Binpack vs Spread scheduling](assets/hami_intro/scheduling_strategies.png)
 
-- **Node binpack:** frees whole machines, cuts cost
-- **Node spread:** isolates faults, HA across zones
-- **GPU binpack:** frees whole GPUs for training
-- **GPU spread:** protects tail latency, less HBM/NVLink contention
+- **Node binpack** frees whole machines: reduces cost, helps cluster autoscaler
+- **Node spread** isolates faults: HA across zones, blast radius control
+- **GPU binpack** prevents fragmentation: frees entire GPUs for training
+- **GPU spread** protects tail latency: reduces HBM and NVLink contention
+- Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn
 
 ---
 
 @layout image-right
 
-## Topology-Aware Scheduling
+## Scheduling Policies
 
-@subtitle NVLink is fast. PCIe is not.
+@subtitle Topology-Aware
 
 <!--
-NVLink versus PCIe is a 7-14x bandwidth gap. HAMi places multi-GPU workloads on NVLink-connected pairs and avoids PCIe bridge pairs. The same topology logic applies to Ascend (HCCS) and other high-speed interconnects.
+NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs. Ascend uses HCCS, other vendors have their own high-speed interconnects: same topology logic applies. This matters for tensor parallelism and large-model training.
 -->
 
-![NVLink PCIe topology](drawings/nvlink_topology.png)
+![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
 
-- **NVLink (H100):** 900 GB/s, 18 links
-- **PCIe 5.0 x16:** 128 GB/s, ~7x slower
-- HAMi pairs GPUs over the fast links
-- Same logic for Ascend (HCCS) and others
+- **NVLink 3 (A100):** 600 GB/s, 12 links
+- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
+- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
+- **NVLink 6 (Rubin):** ~3.6 TB/s target
+- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
+- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
 
 ---
 
 ## Gotchas
 
-@subtitle What surprised us, so it will not surprise you
+@subtitle Hardware limits and Kubernetes gaps
 
 <!--
-Four real-world gotchas. Memory is a hard limit but compute is best-effort. Oversubscription is for inference, not training. Granularity differs per vendor. DRA is young: stable APIs, but no advanced scheduling yet.
+Two gotchas when sharing GPUs. MIG is not available on every device, and DRA is stable but advanced scheduling is still missing from the platform.
 -->
 
 ::: grid {cols=2}
-::: card {tag=red}
-### {icon:gauge cls=accent-secondary} Memory is hard, compute is not
-
-Your memory slice is guaranteed. Compute is time-sliced: best-effort, not reserved. Plan for it.
-:::
-::: card {tag=yellow}
-### {icon:refresh-cw cls=accent-contrast} Oversubscription has limits
-
-Swap idle memory to host RAM fits more models. Use it for inference, not for active training.
-:::
 ::: card {tag=cyan}
-### {icon:layers cls=accent-primary} Granularity varies by vendor
+### {icon:layers cls=accent-primary} MIG is not available everywhere
 
-NVIDIA slices down to 1 MiB memory and 1% compute. Other vendors define their own units. Check your device.
+MIG needs recent data-center GPUs and fixed profiles. Software slicing works on any device.
 :::
 ::: card {tag=green}
-### {icon:git-branch cls=accent-primary} DRA is young
+### {icon:git-branch cls=accent-primary} K8s GPU APIs are still young
 
-Kubernetes DRA is stable, but advanced scheduling is still missing. HAMi fills that gap today.
+DRA is stable, but advanced scheduling (binpack, spread, topology) is still missing from the platform.
 :::
 :::
 
@@ -360,6 +488,18 @@ Baike Holdings
 ::: notes{ tag="green" }
 China Merchants Bank - SNOW Corp. - NIO - KE Holdings - DaoCloud - SF Technology - Prep Education - [cncf.io/case-studies](https://www.cncf.io/case-studies/)
 :::
+
+---
+
+## Demo
+
+@subtitle 3 nodes x 2 A100s: MIG, YOLO, and two vLLMs
+
+<!--
+3 nodes with 2 A100s each. One configured for MIG, one running a bunch of YOLO workloads, and two vLLMs scheduled on top. Watch how HAMi packs and isolates them. Video plays inline; PDF shows a frame.
+-->
+
+@video assets/demo/llm_test.mp4
 
 ---
 
@@ -445,46 +585,6 @@ Contributor Countries
 ![SAP](assets/ecosystem/adopters/sap.png) ![SF Technology](assets/ecosystem/adopters/sftechnology.png) ![Si-Tech](assets/ecosystem/adopters/si-tech.png) ![Snow](assets/ecosystem/adopters/snow.png) ![Viettel](assets/ecosystem/adopters/viettel.png)
 :::
 :::
-
----
-
-## Who This Is For
-
-@subtitle K8s operators, platform engineers, anyone watching GPUs sit idle
-
-<!--
-Three audiences. K8s operators: one resource field, no new API. Platform engineers: share GPUs without touching app code. And anyone watching GPUs sit idle: you can pack them.
--->
-
-::: grid {cols=3}
-::: card {tag=green}
-### {icon:cpu cls=accent-primary} K8s Operators
-
-One extra resource field in the pod spec. No new API to learn.
-:::
-::: card {tag=cyan}
-### {icon:shield-check cls=accent-contrast} Platform Engineers
-
-Share GPUs across teams and vendors, without touching app code.
-:::
-::: card {tag=yellow}
-### {icon:gauge cls=accent-contrast} GPU Watchers
-
-Idle GPUs are wasted money. Pack them with HAMi.
-:::
-:::
-
----
-
-## Demo
-
-@subtitle 3 nodes x 2 A100s: MIG, YOLO, and two vLLMs
-
-<!--
-3 nodes with 2 A100s each. One configured for MIG, one running a bunch of YOLO workloads, and two vLLMs scheduled on top. Watch how HAMi packs and isolates them. Video plays inline; PDF shows a frame.
--->
-
-@video assets/demo/llm_test.mp4
 
 ---
 

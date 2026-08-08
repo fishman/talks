@@ -11,7 +11,7 @@ paginate: true
 # HAMi and Viettel Cloud: From Project to Production
 
 @subtitle Fractional GPU Virtualization for Multi-tenant AI Notebooks
-@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
+@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/fishman twitter=@rezajelveh
 @speaker name="The Anh Nguyen" role="Solutions Engineer, Viettel" github=github.com/ntheanh201
 
 ---
@@ -567,5 +567,5 @@ Community edition is free and open-source. Enterprise edition available with add
 
 # Questions?
 
-@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
+@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/fishman twitter=@rezajelveh
 @speaker name="Anh Nguyen" role="Solutions Engineer, Viettel"

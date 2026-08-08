@@ -347,5 +347,5 @@ Community edition is free and open-source. Enterprise edition available with add
 
 # Questions?
 
-@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/rezajelveh twitter=@rezajelveh
+@speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/fishman twitter=@rezajelveh
 @speaker name="Anh Nguyen" role="Solutions Engineer, Viettel"

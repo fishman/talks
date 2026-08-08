@@ -4,6 +4,8 @@ variant: light # optional, defaults to light
 paginate: true
 size: 16:9
 # logo: "assets/brand/hami-logo.png"
+logo: assets/brand/dynamia-logo.svg
+logo_dark: assets/brand/dynamia-logo-white.png
 title: HAMi Enterprise
 footer: "HAMi · "
 pygments_style: ayu-mirage

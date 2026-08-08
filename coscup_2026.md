@@ -331,7 +331,7 @@ digraph G {
 @subtitle One bad task must not kill its neighbors
 
 <!--
-Without isolation, one workload can grab all memory and OOM-kill the other tasks on the same GPU. HAMi cuts memory at the driver level: every task sees only its own slice. Compute is time-sliced, best-effort.
+Without isolation, one workload can grab all memory and OOM-kill the other tasks on the same GPU. HAMi enforces memory when it hijacks the CUDA API calls: every task sees only its own slice.
 -->
 
 ::: grid {cols=2}
@@ -343,7 +343,7 @@ Tasks share a GPU with no borders. One greedy task eats all memory and kills the
 ::: card {tag=green}
 ### {icon:shield-check cls=accent-primary} With HAMi
 
-Each task sees only its slice. Memory is a hard limit, cut at the driver level. Compute is time-sliced: best-effort, but fair.
+Each task sees only its slice. Memory is a hard limit, enforced by the hijacked CUDA calls: every allocation is checked against your slice.
 :::
 ::: card {tag=yellow}
 ### {icon:refresh-cw cls=accent-contrast} Oversubscription
@@ -385,6 +385,49 @@ HAMi differentiates with symbolic hijacking (1 MiB granularity on NVIDIA), consu
 
 ---
 
+## Consumable Capacities
+
+@subtitle GPU resources as a pool you draw from
+
+<!--
+GPU resources are consumable: memory in MiB, compute in % of the GPU's SMs. The scheduler tracks remaining capacity per device and packs by it. HAMi-core enforces the ceiling on hijacked CUDA calls; nvidia-smi inside the pod shows your slice, not the card. Since v2.8 the same semantics exist on the DRA path (ResourceSlice typed capacities, ResourceClaims).
+-->
+
+::: grid {cols=2}
+::: card {tag=cyan}
+### {icon:gauge cls=accent-primary} Memory and compute, separate axes
+
+Request MiB of VRAM and percent of the GPU's SMs. What you use is what you get, no fixed profiles.
+:::
+::: card {tag=green}
+### {icon:layers cls=accent-primary} Scheduler packs by remaining capacity
+
+Every GPU reports memory and compute left. Binpack and spread policies fit requests into the gaps.
+:::
+::: card {tag=yellow}
+### {icon:shield-check cls=accent-contrast} Enforced on hijacked calls
+
+HAMi-core caps every allocation at your slice. Inside the pod, nvidia-smi shows 0 MiB / 4000 MiB.
+:::
+::: card {tag=red}
+### {icon:git-branch cls=accent-contrast} Same semantics on DRA (v2.8+)
+
+Typed ResourceSlice capacities (memory step 1 MiB, cores 0-100). Requests become ResourceClaims.
+:::
+:::
+
+@row
+
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1          # one vGPU slice
+    nvidia.com/gpumem: 4000    # 4000 MiB of VRAM
+    nvidia.com/gpucores: 30    # 30% of the GPU's SMs
+```
+
+---
+
 @layout image-right
 
 ## Scheduling Policies
@@ -402,6 +445,91 @@ Two axes, four patterns. Node binpack saves money, node spread saves uptime. GPU
 - **GPU binpack** prevents fragmentation: frees entire GPUs for training
 - **GPU spread** protects tail latency: reduces HBM and NVLink contention
 - Advanced scheduling works with standalone HAMi; DRA mode can use Yunikorn
+
+---
+
+@layout two-col
+
+## Node Binpack
+
+@subtitle Concentrate tasks, free whole machines
+
+<!--
+Node binpack fills the most-used nodes first. Tasks land on the fullest node with capacity, so empty nodes stay idle and can be scaled to zero. The cost play: fewer active nodes, less power, smaller footprint.
+-->
+
+- Fills the fullest nodes first, emptiest last
+- Frees whole machines: unused nodes stay idle, ready to power down
+- Cuts cost: fewer active nodes, less power, smaller footprint
+- Pairs with cluster autoscaling: empty nodes are removed automatically
+- Best for: cost-sensitive clusters, batch and offline jobs, dev and test fleets
+
+@col
+
+![Node Binpack](drawings/node_binpack.drawio.png)
+
+---
+
+@layout two-col
+
+## Node Spread
+
+@subtitle One task per node, faults stay local
+
+<!--
+Node spread puts each task on a different node. A node crash, reboot, or drain hits one task, not the whole fleet. The HA play: use it for production serving and multi-tenant clusters. It costs more nodes than binpack.
+-->
+
+- One task per node: load balances across the cluster
+- Fault isolation: a node crash or reboot takes down one task, not all
+- Survives maintenance: node drains hit one replica at a time
+- Use it for: production inference with SLAs. Losing a node costs one replica, not the whole model
+
+@col
+
+![Node Spread](drawings/node_spread.drawio.png)
+
+---
+
+@layout two-col
+
+## GPU Binpack
+
+@subtitle Fill one GPU, free the rest
+
+<!--
+GPU binpack puts several tasks on the same GPU. Each task gets its own slice of memory and compute. This matters most when GPUs are scarce: training needs whole GPUs, so don't let small tasks fragment them.
+-->
+
+- Several tasks share one GPU, each with its own slice of memory and SMs
+- Prevents fragmentation: scattered small tasks no longer block whole GPUs
+- Frees entire GPUs for training jobs that cannot share
+- Best for: fleets of small workloads - inference endpoints, batch jobs, dev and test
+
+@col
+
+![GPU Binpack](drawings/gpu_binpack.drawio.png)
+
+---
+
+@layout two-col
+
+## GPU Spread
+
+@subtitle One task per GPU, no shared bottlenecks
+
+<!--
+GPU spread puts each task on its own GPU on the same node. No tenant shares compute, HBM bandwidth, or NVLink with another. If one task thrashes its GPU, the neighbors do not feel it. Use it for latency-sensitive production serving.
+-->
+
+- One task per GPU: compute and HBM bandwidth are never shared
+- Isolates noisy neighbors: a thrasher on one GPU does not slow the others
+- Protects tail latency: no cross-tenant NVLink or HBM contention
+- Best for: latency-sensitive serving with strict SLOs
+
+@col
+
+![GPU Spread](drawings/gpu_spread.drawio.png)
 
 ---
 
@@ -423,6 +551,21 @@ NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to N
 - **NVLink 6 (Rubin):** ~3.6 TB/s target
 - **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
 - **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
+
+---
+
+## Workload-Aware Scheduling
+
+@subtitle Upstream Kubernetes is catching up
+
+<!--
+WAS is upstream work by WG Batch and SIG Scheduling: a Workload API that lets the scheduler treat a group of pods as one unit. Gang scheduling landed as alpha in v1.35, GPU scheduling on top of DRA in v1.36. Advanced policies are still plugin territory.
+-->
+
+- **What it is:** a Workload API so the scheduler treats a group of pods as one unit
+- **Gang scheduling (v1.35, alpha):** all-or-nothing placement, no half-started training jobs
+- **GPU scheduling (v1.36):** workload-aware placement on top of DRA
+- **Today:** advanced policies (binpack, spread, topology) still live in plugins and tools like HAMi
 
 ---
 
@@ -504,6 +647,7 @@ China Merchants Bank - SNOW Corp. - NIO - KE Holdings - DaoCloud - SF Technology
 ---
 
 ## Real Results
+@hidden
 
 @subtitle Teams cut GPU costs by 40-60%
 

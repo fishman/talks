@@ -370,12 +370,12 @@ ax.bar(range(units), [1] * units, width=0.85,
 for u in range(units):
     ax.text(u, -0.18, str(u + 1), ha="center", va="top", fontsize=9.5, color=dimmed)
 
-ax.annotate("", xy=(0.18, -0.75), xytext=(1.82, -0.75),
+ax.annotate("", xy=(-0.35, -0.75), xytext=(1.35, -0.75),
             arrowprops=dict(arrowstyle="<->", color=fg, linewidth=1.4))
-ax.text(1, -1.05, "pod A: 2 of 8 units = 25%", ha="center", va="top",
+ax.text(0.5, -1.05, "pod A: 2 of 8 units = 25%", ha="center", va="top",
         fontsize=11.5, color=fg, fontweight="bold")
-ax.text(5, 0.5, "6 units free\nfor other pods", ha="center", va="center",
-        fontsize=10, color=dimmed, linespacing=1.4)
+ax.text(4.5, -1.05, "6 units free for other pods", ha="center", va="top",
+        fontsize=11.5, color=fg, fontweight="bold")
 
 ax.text(-0.55, 1.75, "COMPUTE UNITS: 8 ON THE DEVICE, 2 ASSIGNED TO POD A",
         fontsize=10, color=dimmed, family="monospace")

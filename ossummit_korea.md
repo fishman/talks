@@ -1,5 +1,6 @@
 ---
 theme: ossummit_korea
+seaborn_theme: ossummit_korea
 title: Simplifying AI for Edge Compute with HAMi
 footer: Simplifying AI for Edge Compute with HAMi - Open Source Summit Korea 2026
 logo: assets/brand/dynamia-logo.svg
@@ -245,41 +246,253 @@ resources:
 @subtitle Four ways to share one device
 
 <!--
-Slicing comes in four flavors. Memory and compute slicing are the core of HAMi: 1 MiB memory, 1% compute. Time slicing is pure software: no vendor ships a time-quantum API, the scheduler rotates compute access over time. So even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. That is reverse engineering: fragile, breaks on SDK updates. Better to ask the vendor for support, the way HAMi does with NVIDIA and Huawei.
+Slicing comes in four flavors. Memory and compute slicing are the core of HAMi: 1 MiB memory, 1% compute. Compute slicing caps the % of the device's compute units a pod may use; it is enforced on every kernel launch and a pod cannot burst above its slice even when the device is idle (MPS %, dcucores, vcore are vendor names for the same quota). Time slicing is pure software: no vendor ships a time-quantum API, the scheduler rotates compute access over time. So even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. That is reverse engineering: fragile, breaks on SDK updates. Better to ask the vendor for support, the way HAMi does with NVIDIA and Huawei.
+
+Compute slicing is the goal, the mechanism depends on the vendor. HAMi exposes one uniform API (gpucores: 40) and adapts: NVIDIA and Ascend have no hardware compute cap, so HAMi intercepts launches in user space (libvgpu.so, token bucket), finest granularity at 1%. AMD CU masking and NVIDIA MPS are hardware-scheduler-honored caps, static per process. Kunlunxin vXPU and Hygon vDCU are hardware-fenced, coarse but silicon-enforced. The boundary: vendors with no mechanism at all, like DeepX and Axelera, no hijack point and no quota API, so compute slicing is impossible without reverse engineering.
 -->
 
 ::: grid {cols=2}
 ::: card {tag=green}
 ### {icon:memory-stick cls=accent-secondary} Memory slicing
 
-- Carve device memory per tenant
-- HAMi: 1 MiB, dynamic per pod
-- Native options are fixed partitions (MIG, vXPU buckets)
+- Carve memory per tenant
+- HAMi: 1 MiB per pod
+- Native: fixed partitions (MIG, vXPU)
 :::
 ::: card {tag=cyan}
 ### {icon:gauge cls=accent-secondary} Compute slicing
 
-- Percent of compute units per tenant
-- Core quotas: MPS %, dcucores, vcore
-- Hard limit enforced on every call
+- Cap compute at a % of the device
+- HAMi: 1% per pod
 :::
 ::: card {tag=yellow}
 ### {icon:clock cls=accent-contrast} Time slicing
 
-- Rotate compute access over time
-- Pure software: no vendor ships a time-quantum API
-- Preemption optional: without it, long kernels run to completion
+- Workloads take turns
+- Pure software: no vendor API
 :::
 ::: card {tag=red}
 ### {icon:layers cls=accent-primary} Hardware partitioning
 
 - MIG, SR-IOV, vXPU, vDCU
-- Static, hardware-enforced
-- Strongest isolation, least flexible
+- Static, strongest isolation
 :::
 :::
 
-**Time slicing is pure software.** Even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. Reverse engineering is fragile: ask the vendor for support instead.
+**Time slicing is pure software:** reverse engineering possible, better if the vendor SDK supports it.
+
+---
+
+## Memory Slicing
+
+@subtitle Carve unused memory into per-pod slices
+
+<!--
+Real measured jobs, each holding a whole H200 (141 GB): the time-series inference job used 1 GB, the YOLO training job 39 GB. Whole-card allocation wastes ~100 GB. Memory slicing carves it into MiB-level partitions, one per pod, dynamic.
+-->
+
+::: card
+```seaborn
+import matplotlib.pyplot as plt
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+red = cmap(4.5 / 12)
+yellow = cmap(6.5 / 12)
+grey = "#eceae8"
+
+fig, ax = plt.subplots(figsize=(9.5, 2.9))
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+ax.text(-4, 1.75, "GPU MEMORY: ALLOCATED VS USED", fontsize=10.5, color=dimmed, family="monospace")
+
+ax.barh(1, 141, color=grey, height=0.5)
+ax.barh(1, 1, color=red, height=0.5)
+ax.barh(0, 141, color=grey, height=0.5)
+ax.barh(0, 39, color=yellow, height=0.5)
+
+ax.text(-4, 1, "Inference\njob", ha="right", va="center", fontsize=12, color=fg, fontweight="bold", linespacing=1.4)
+ax.text(-4, 0, "Training\njob", ha="right", va="center", fontsize=12, color=fg, fontweight="bold", linespacing=1.4)
+
+ax.text(6, 1, "1 GB used", ha="left", va="center", fontsize=11.5, color=fg)
+ax.text(44, 0, "39 GB used", ha="left", va="center", fontsize=11.5, color=fg)
+
+ax.text(141, 1.42, "one whole H200 = 141 GB", ha="right", va="bottom", fontsize=10.5, color=dimmed)
+
+ax.annotate("", xy=(139, -0.55), xytext=(41, -0.55),
+            arrowprops=dict(arrowstyle="<->", color=dimmed, linewidth=1.4))
+ax.text(90, -0.74, "~100 GB free: sliced per pod",
+        ha="center", va="top", fontsize=10.5, color=fg, fontweight="bold")
+
+ax.set_xlim(-4, 148)
+ax.set_ylim(-1.15, 1.95)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+```
+:::
+
+- One job holds a whole card: 1 GB used of 141 GB
+- Slicing frees the rest: MiB-level partitions per pod
+- Dynamic: repartition per pod, no reboot
+
+---
+
+## Compute Slicing
+
+@subtitle Percent of compute per pod, enforced on every call
+
+<!--
+Each pod is capped at a percent of the device's compute units. The cap is enforced on every kernel launch: a pod cannot burst above its slice even when the rest of the device is idle. Units not assigned to a pod stay free for other pods.
+-->
+
+::: card
+```seaborn
+import matplotlib.pyplot as plt
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+green = cmap(2.5 / 12)
+grey = "#9ca3af"
+
+fig, ax = plt.subplots(figsize=(9, 2.7))
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+units, assigned = 8, 2
+ax.bar(range(units), [1] * units, width=0.85,
+       color=[green] * assigned + [grey] * (units - assigned),
+       edgecolor="white", linewidth=1.5)
+
+for u in range(units):
+    ax.text(u, -0.18, str(u + 1), ha="center", va="top", fontsize=9.5, color=dimmed)
+
+ax.annotate("", xy=(0.18, -0.75), xytext=(1.82, -0.75),
+            arrowprops=dict(arrowstyle="<->", color=fg, linewidth=1.4))
+ax.text(1, -1.05, "pod A: 2 of 8 units = 25%", ha="center", va="top",
+        fontsize=11.5, color=fg, fontweight="bold")
+ax.text(5, 0.5, "6 units free\nfor other pods", ha="center", va="center",
+        fontsize=10, color=dimmed, linespacing=1.4)
+
+ax.text(-0.55, 1.75, "COMPUTE UNITS: 8 ON THE DEVICE, 2 ASSIGNED TO POD A",
+        fontsize=10, color=dimmed, family="monospace")
+
+ax.set_xlim(-0.6, 7.6)
+ax.set_ylim(-1.5, 2.2)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+```
+:::
+
+- Each pod gets a fixed % of the device's compute units
+- Hard ceiling on every kernel launch: no bursting above the slice
+- Unused units stay free for other pods
+
+---
+
+## Time Slicing
+
+@subtitle Workloads take turns at kernel boundaries
+
+<!--
+High-priority tasks preempt low-priority ones at CUDA kernel boundaries: no wasted compute, clean context switch. The kernel boundary is the key: you cannot preempt mid-kernel. Pure software: no vendor ships a time-quantum API.
+-->
+
+::: card
+```seaborn
+import matplotlib.pyplot as plt
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+green = cmap(2.5 / 12)
+grey = "#9ca3af"
+
+fig, ax = plt.subplots(figsize=(9, 3.1))
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+for i, name in enumerate(["Agent A", "Agent B", "Agent C", "Agent D"]):
+    y = 3 - i
+    for q in range(4):
+        color = green if q == i else grey
+        ax.barh(y, 25, left=q * 25, color=color, height=0.6)
+    ax.text(-4, y, name, ha="right", va="center", fontsize=11, color=fg, fontweight="bold")
+    ax.text(i * 25 + 12.5, y, "EXECUTING", ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+
+for x in [25, 50, 75]:
+    ax.plot([x, x], [-0.5, 3.5], color=fg, linewidth=0.8, linestyle="--")
+
+ax.text(50, 3.85, "TIME SLICING: ONE DEVICE, FOUR SLICES",
+        ha="center", fontsize=10.5, color=dimmed, family="monospace")
+ax.text(106, -0.75, "time ->", ha="right", va="top", fontsize=9, color=dimmed)
+
+ax.set_xlim(-6, 106)
+ax.set_ylim(-1.0, 4.1)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+ax.set_xticks([])
+```
+:::
+
+- Rotate compute access over time
+- Kernel boundary is the switch point: no mid-kernel preemption
+- Preemption optional: without it, long kernels run to completion
+
+---
+
+## Hardware Partitioning
+
+@subtitle Fixed slots, strongest isolation, least flexible
+
+<!--
+MIG, SR-IOV, vXPU, vDCU: partitions set at boot, enforced in hardware, memory and compute fenced per slot. Strongest isolation, least flexible: no live repartition. Software slicing can repartition live but lives in the runtime layer.
+-->
+
+::: card
+```seaborn
+import matplotlib.pyplot as plt
+
+fg = plt.rcParams["text.color"]
+dimmed = plt.rcParams["xtick.color"]
+cmap = plt.get_cmap("Paired")
+blue = cmap(0.5 / 12)
+green = cmap(2.5 / 12)
+orange = cmap(6.5 / 12)
+grey = "#9ca3af"
+
+fig, ax = plt.subplots(figsize=(8, 2.8))
+ax.set_facecolor("none")
+fig.patch.set_alpha(0)
+
+for left, w, c, lab in [(0, 50, blue, "1/2 card"), (50, 25, green, "1/4 card"), (75, 25, orange, "1/4 card")]:
+    ax.barh(1, w, left=left, color=c, height=0.65)
+    ax.text(left + w / 2, 1, lab, ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+
+ax.barh(0, 40, left=0, color=grey, height=0.65)
+ax.barh(0, 35, left=40, color=grey, height=0.65)
+ax.barh(0, 25, left=75, color=grey, height=0.65)
+for x in [40, 75]:
+    ax.plot([x, x], [-0.38, 0.62], color=fg, linewidth=1.2, linestyle="--")
+for x, lab in [(20, "40%"), (57.5, "35%"), (87.5, "25%")]:
+    ax.text(x, 0, lab, ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
+
+ax.text(0, 1.38, "FIXED AT BOOT:  MIG, SR-IOV, vXPU, vDCU", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+ax.text(0, 0.38, "REPARTITIONED LIVE:  HAMi slices", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+
+ax.set_xlim(0, 100)
+ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+```
+:::
+
+- MIG, SR-IOV, vXPU, vDCU: fixed at boot, hardware-enforced
+- Memory and compute fenced per slot: strongest isolation
+- No live repartition: fixed sizes only
 
 ---
 
@@ -681,6 +894,17 @@ Binpack to pack many agents onto one device. Spread for latency-sensitive servin
 - One scheduling plane across heterogeneous accelerators
 - Open source: HAMi is a CNCF Incubation project
 
+---
+
+## Demo
+
+@subtitle 3 nodes x 2 A100s: MIG, YOLO, and two vLLMs
+
+<!--
+3 nodes with 2 A100s each. One configured for MIG, one running a bunch of YOLO workloads, and two vLLMs scheduled on top. Watch how HAMi packs and isolates them. Video plays inline; PDF shows a frame.
+-->
+
+@video assets/demo/llm_test.mp4
 ---
 
 @layout metrics

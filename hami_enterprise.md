@@ -1,5 +1,4 @@
 ---
-theme: kcd_vietnam
 title: "From Project to Production: HAMi and Viettel Cloud"
 footer: HAMi - Heterogeneous AI Computing Virtualization Middleware
 paginate: true

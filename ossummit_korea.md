@@ -10,6 +10,7 @@ paginate: true
 ---
 
 @variant dark
+@side-image assets/brand/ossummit_korea/qr-code.png
 @kicker Open Source Summit Korea 2026  -  Embedded & Open AI
 # Simplifying AI for Edge Compute with HAMi
 
@@ -127,9 +128,8 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 
 - One model per device, most of it idle
 - Fixed memory budgets: install once, never share
-- Vendors locked in: Jetson CUDA vs NPU SDKs
-- No central observability
-- Fault isolation: one bad agent kills the device
+- One bad agent takes down the device
+- Requirements vary wildly: tiny CV filters to large agent LLMs
 :::
 
 ::: arrow
@@ -140,15 +140,15 @@ GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing 
 ::: card {tag=compare}
 ### Requirements
 
-- Hardware agnostic: one API, any accelerator
-- Carve one device's memory into fine-grained slices
-- Time-sharing when demand exceeds memory
-- Advanced scheduling: binpack, spread
-- Open source, no vendor lock-in
+- Guaranteed to run: unattended, no ops team
+- Runs stably: hard limits, one agent cannot kill the device
+- Right device per workload, big or small: NPU for CV, GPU-class for LLMs, one API
+- Same deployment patterns: no manifest changes per device
+- Fine-grained slices: carve memory, time-share when demand exceeds
 :::
 
 <!--
-The real work is memory isolation: carving unified memory so multiple agents run concurrently, and time-sharing when demand exceeds it.
+At the edge the bar is different: no observability stacks, the device must run unattended, the silicon must match the workload, and deployment patterns stay unchanged. Edge workloads span tiny CV filters to large agent LLMs, big or small, on whatever silicon is there. The real work is memory isolation: carving unified memory so multiple agents run concurrently, and time-sharing when demand exceeds it.
 -->
 
 ---
@@ -156,6 +156,49 @@ The real work is memory isolation: carving unified memory so multiple agents run
 # Part 2: The Solution
 
 @subtitle One scheduling plane across heterogeneous accelerators
+
+---
+
+## HAMi Capabilities
+
+@subtitle Six things HAMi brings to GPU scheduling
+
+<!--
+Six capabilities. The key ones for this talk: hard isolation, advanced scheduling, and unified monitoring. Heterogeneous management is the differentiator, not just NVIDIA.
+-->
+
+::: grid {cols=2}
+::: card
+### {icon:layers cls=accent-primary} Heterogeneous Management
+
+Manage GPU, NPU, MLU, and other accelerators in one workflow.
+:::
+::: card
+### {icon:shield-check cls=accent-primary} Hard Isolation
+
+Slice memory and compute with hard isolation at runtime.
+:::
+::: card
+### {icon:git-branch cls=accent-contrast} Advanced Scheduling
+
+Binpack, spread, and topology-aware placement policies.
+:::
+::: card
+### {icon:box cls=accent-primary} Kubernetes Native
+
+Kubernetes-native APIs, DRA, and CDI support.
+:::
+::: card
+### {icon:gauge cls=accent-primary} Resource Isolation & QoS
+
+Memory and core quotas for fair, stable sharing.
+:::
+::: card
+### {icon:chart-bar cls=accent-contrast} Unified Monitoring
+
+Consistent metrics and visibility across vendors.
+:::
+:::
 
 ---
 
@@ -194,6 +237,65 @@ resources:
     nvidia.com/gpumem: 2048
     nvidia.com/gpucores: 20
 ```
+
+---
+
+## Types of Slicing
+
+@subtitle Four ways to share one device
+
+<!--
+Slicing comes in four flavors. Memory and compute slicing are the core of HAMi: 1 MiB memory, 1% compute. Time slicing is pure software: no vendor ships a time-quantum API, the scheduler rotates compute access over time. So even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. That is reverse engineering: fragile, breaks on SDK updates. Better to ask the vendor for support, the way HAMi does with NVIDIA and Huawei.
+-->
+
+::: grid {cols=2}
+::: card {tag=green}
+### {icon:memory-stick cls=accent-secondary} Memory slicing
+
+- Carve device memory per tenant
+- HAMi: 1 MiB, dynamic per pod
+- Native options are fixed partitions (MIG, vXPU buckets)
+:::
+::: card {tag=cyan}
+### {icon:gauge cls=accent-secondary} Compute slicing
+
+- Percent of compute units per tenant
+- Core quotas: MPS %, dcucores, vcore
+- Hard limit enforced on every call
+:::
+::: card {tag=yellow}
+### {icon:clock cls=accent-contrast} Time slicing
+
+- Rotate compute access over time
+- Pure software: no vendor ships a time-quantum API
+- Preemption optional: without it, long kernels run to completion
+:::
+::: card {tag=red}
+### {icon:layers cls=accent-primary} Hardware partitioning
+
+- MIG, SR-IOV, vXPU, vDCU
+- Static, hardware-enforced
+- Strongest isolation, least flexible
+:::
+:::
+
+**Time slicing is pure software.** Even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. Reverse engineering is fragile: ask the vendor for support instead.
+
+---
+
+## Making NPUs Schedulable
+
+@subtitle What it takes to share them
+
+<!--
+Three pieces are needed. Capacity reporting: tell the scheduler what each device has, in memory MiB and compute percent. Allocation: decide which slice goes where, binpack or spread. Enforcement: the hard part. On CUDA, HAMi hijacks the runtime calls. NPU SDKs are closed compilers: there is no hijack point, so enforcement has to happen in the SDK's runtime or stay scheduler-side. The DRA path solves this cleanly: typed capacities in ResourceSlices, allocation decided by the scheduler, no code changes. Status today: HAMi supports NVIDIA, Ascend, Cambricon, Hygon, Iluvatar and more; Jetson and these NPUs are not supported yet. This is the roadmap, honestly stated.
+-->
+
+- **Capacity reporting:** publish memory MiB and compute % per device
+- **Allocation:** binpack and spread policies fit agents into the gaps
+- **Enforcement: the hard part.** CUDA has a hijack point (the runtime library). NPU SDKs are closed compilers: no hijack, so limits live in the SDK runtime or scheduler-side
+- **The clean path is DRA:** typed capacities in ResourceSlices, scheduler allocates, no code changes
+- **Honest status:** HAMi shares NVIDIA, Ascend, Cambricon, Hygon, Iluvatar today. Jetson and these NPUs are the frontier, not a shipped feature
 
 ---
 
@@ -270,6 +372,8 @@ MIG partitions are fixed at boot. Edge demand changes: agents come and go. Softw
 DeepX and Furiosa are Korean, both based in Seongnam. DX-M1: 25 TOPS at 1-5 W on an M.2 card, 4 GB LPDDR5 on the module. Axelera is Dutch (Eindhoven): Metis AIPU, RISC-V with digital in-memory computing, ~214 TOPS at 3.5-15 W. Furiosa RNGD: datacenter NPU, 512 TOPS INT8 at 180 W, 48 GB HBM3, PCIe Gen5. Jetson is self-contained with unified memory; the NPUs are PCIe add-ons with memory on the card. Only RNGD has hardware partitioning (SR-IOV, fixed 6/12/24/48 GB); the rest share nothing at the hardware level, so scheduling them means accounting for on-card capacity, not carving host memory.
 
 If someone asks why Metis wins on per-watt: moving data costs far more energy than doing the math. Axelera's chip computes inside its own memory, so the weights never travel. That only works while the model fits in the chip's small on-chip memory. Big models need big HBM memory, and then every chip pays the data-movement tax. That is why RNGD and every LLM chip lands at a few TOPS/W: not a flaw in RNGD, it is the physics of large models.
+
+If someone asks about FP: RNGD lists FP8 512 TFLOPS and BF16 256 TFLOPS, and its FP8 equals its INT8. That matters for LLMs, which run in FP8 or BF16: you serve full-precision formats at full throughput, no INT8 quantization needed. Jetson's FP16 is 85 TFLOPS sparse (dense ~42.5); its 275 TOPS is also the sparse headline (GPU + NVDLA). DeepX and Axelera publish no FP numbers: in-memory compute runs INT8/INT4. For scale: RNGD FP8 per watt (512/180 = 2.8 TFLOPS/W) lands exactly on H100 dense FP8 per watt (1979/700 = 2.8).
 -->
 
 | | Jetson AGX Orin | DeepX DX-M1 | Axelera Metis | Furiosa RNGD |
@@ -281,23 +385,7 @@ If someone asks why Metis wins on per-watt: moving data costs far more energy th
 | Memory | 64 GB unified LPDDR5 | 4 GB LPDDR5 on card | 16 MB L1 + 32 MB L2 SRAM, 4-16 GB DDR | 48 GB HBM3 |
 | Partitioning | None | None | Static 25% L2 per core (1-4) | SR-IOV fixed: 6/12/24/48 GB |
 
-*RNGD is datacenter class, not edge: 180 W is low for that class (NVIDIA runs 400-1000 W). Value here: Korean domestic silicon, air-cooled density, and the only hardware partitioning in the table. Its edge sibling Warboy (64 TOPS) has none.*
-
----
-
-## Making NPUs Schedulable
-
-@subtitle What it takes to share them
-
-<!--
-Three pieces are needed. Capacity reporting: tell the scheduler what each device has, in memory MiB and compute percent. Allocation: decide which slice goes where, binpack or spread. Enforcement: the hard part. On CUDA, HAMi hijacks the runtime calls. NPU SDKs are closed compilers: there is no hijack point, so enforcement has to happen in the SDK's runtime or stay scheduler-side. The DRA path solves this cleanly: typed capacities in ResourceSlices, allocation decided by the scheduler, no code changes. Status today: HAMi supports NVIDIA, Ascend, Cambricon, Hygon, Iluvatar and more; Jetson and these NPUs are not supported yet. This is the roadmap, honestly stated.
--->
-
-- **Capacity reporting:** publish memory MiB and compute % per device
-- **Allocation:** binpack and spread policies fit agents into the gaps
-- **Enforcement: the hard part.** CUDA has a hijack point (the runtime library). NPU SDKs are closed compilers: no hijack, so limits live in the SDK runtime or scheduler-side
-- **The clean path is DRA:** typed capacities in ResourceSlices, scheduler allocates, no code changes
-- **Honest status:** HAMi shares NVIDIA, Ascend, Cambricon, Hygon, Iluvatar today. Jetson and these NPUs are the frontier, not a shipped feature
+*RNGD is datacenter class, not edge: 512 TOPS at 180 W is 2.8 TOPS/W, 1.8x the A100 (624 INT8 TOPS at 400 W) and on par with H100 dense FP8 (1979 TOPS at 700 W). Value here: Korean domestic silicon, air-cooled density, the only hardware partitioning in the table. Its edge sibling Warboy (64 TOPS) has none.*
 
 ---
 
@@ -494,49 +582,6 @@ Typed ResourceSlice capacities (memory step 1 MiB, cores 0-100). Requests become
 
 ---
 
-## Types of Slicing
-
-@subtitle Four ways to share one device
-
-<!--
-Slicing comes in four flavors. Memory and compute slicing are the core of HAMi: 1 MiB memory, 1% compute. Time slicing is pure software: no vendor ships a time-quantum API, the scheduler rotates compute access over time. So even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. That is reverse engineering: fragile, breaks on SDK updates. Better to ask the vendor for support, the way HAMi does with NVIDIA and Huawei.
--->
-
-::: grid {cols=2}
-::: card {tag=green}
-### {icon:memory-stick cls=accent-secondary} Memory slicing
-
-- Carve device memory per tenant
-- HAMi: 1 MiB, dynamic per pod
-- Native options are fixed partitions (MIG, vXPU buckets)
-:::
-::: card {tag=cyan}
-### {icon:gauge cls=accent-secondary} Compute slicing
-
-- Percent of compute units per tenant
-- Core quotas: MPS %, dcucores, vcore
-- Hard limit enforced on every call
-:::
-::: card {tag=yellow}
-### {icon:clock cls=accent-contrast} Time slicing
-
-- Rotate compute access over time
-- Pure software: no vendor ships a time-quantum API
-- Preemption optional: without it, long kernels run to completion
-:::
-::: card {tag=red}
-### {icon:layers cls=accent-primary} Hardware partitioning
-
-- MIG, SR-IOV, vXPU, vDCU
-- Static, hardware-enforced
-- Strongest isolation, least flexible
-:::
-:::
-
-**Time slicing is pure software.** Even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. Reverse engineering is fragile: ask the vendor for support instead.
-
----
-
 @layout image-right
 
 ## Scheduling Policies
@@ -645,24 +690,24 @@ Binpack to pack many agents onto one device. Spread for latency-sensitive servin
 
 ::: grid {cols=4}
 ::: card {metric}
-100%
-Hardware pool utilization
-Baike Holdings
+0
+Driver, kernel, code changes needed
+SF Technology
 :::
 ::: card {metric}
-10x
-GPU utilization in CI
+1-2 GB
+Memory per small-model inference service
+KE Holdings
+:::
+::: card {metric}
+4x
+GPU utilization: 5-10% to 30-50%
 NIO
 :::
 ::: card {metric}
-30%
-Fewer GPU hours
-China Merchants Bank
-:::
-::: card {metric}
-10,000+
-Pods running concurrently
-Baike Holdings
+90%
+GPU infra managed by HAMi on RTX 4070/4090
+Prep Edu
 :::
 :::
 
@@ -730,7 +775,10 @@ Contributor Countries
 
 @kicker Thank You
 # Questions? Try HAMi
+@side-image assets/brand/ossummit_korea/qr-code.png
 
 @subtitle github.com/Project-HAMi/HAMi
+
+**Got devices we do not support yet? We would love to play with them.**
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/fishman linkedin=linkedin.com/in/rezajelveh

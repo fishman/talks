@@ -2,8 +2,8 @@
 theme: ossummit_korea
 title: Simplifying AI for Edge Compute with HAMi
 footer: Simplifying AI for Edge Compute with HAMi - Open Source Summit Korea 2026
-logo: assets/brand/hami-logo.png
-logo_dark: assets/brand/hami-logo.png
+logo: assets/brand/dynamia-logo.svg
+logo_dark: assets/brand/dynamia-logo-white.png
 watermark: assets/brand/cncf-logo.png
 transition: fade
 paginate: true
@@ -54,6 +54,44 @@ No GPU cluster admin, no Prometheus dashboards. It has to work after setup, unat
 :::
 
 Democratizing agentic AI means fixing the compute layer.
+
+---
+
+## Not All Edge Compute Is Agents
+
+@subtitle Most edge inference today is CV and classic ML
+
+<!--
+Most inference running on edge devices today is not language models. YOLO-style detection, classification, OCR, embeddings: small models, millisecond latency, already cheap on NPUs and embedded GPUs. Agents are a new slice and the hardest one to schedule: memory-heavy LLMs running concurrently on the same device.
+-->
+
+Most edge inference is CV and classic ML, not LLMs. Agents are the new slice.
+
+::: grid {cols=3}
+::: card {tag=green}
+### {icon:scan cls=accent-secondary} CV and classic inference
+
+- YOLO, classification, OCR, embeddings
+- 1-50M params, millisecond latency
+- Runs on NPUs and embedded GPUs today
+:::
+::: card {tag=cyan}
+### {icon:message-square cls=accent-primary} LLMs
+
+- Autoregressive text generation
+- Weights plus KV cache in memory
+- Needs GPU-class silicon
+:::
+::: card {tag=red}
+### {icon:bot cls=accent-secondary} Agents
+
+- LLMs in a tool-use loop
+- Several concurrent per device
+- Memory-hungry, latency-tolerant
+:::
+:::
+
+One deployment pattern for all three: same device sharing for small-model inference and agent tasks.
 
 ---
 
@@ -224,23 +262,26 @@ MIG partitions are fixed at boot. Edge demand changes: agents come and go. Softw
 
 ---
 
-## Jetson vs NPUs: DeepX and Axelera
+## Jetson vs NPUs: DeepX, Axelera and Furiosa
 
-@subtitle Higher performance per watt, different schedulability
+@subtitle Different partitioning, different schedulability
 
 <!--
-DeepX is Korean, based in Seongnam: DX-M1 is a 25 TOPS NPU at 1-5 W on an M.2 card, with 4 GB of LPDDR5 on the module. Axelera is Dutch, based in Eindhoven: Metis AIPU is a RISC-V chip with digital in-memory computing, up to ~214 TOPS at 3.5-15 W. Both are PCIe add-ons for x86 or ARM hosts. Higher performance per watt than Jetson, but the memory lives on the card, not shared with the host: scheduling them means accounting for on-card capacity, not carving host memory.
+DeepX and Furiosa are Korean, both based in Seongnam. DX-M1: 25 TOPS at 1-5 W on an M.2 card, 4 GB LPDDR5 on the module. Axelera is Dutch (Eindhoven): Metis AIPU, RISC-V with digital in-memory computing, ~214 TOPS at 3.5-15 W. Furiosa RNGD: datacenter NPU, 512 TOPS INT8 at 180 W, 48 GB HBM3, PCIe Gen5. Jetson is self-contained with unified memory; the NPUs are PCIe add-ons with memory on the card. Only RNGD has hardware partitioning (SR-IOV, fixed 6/12/24/48 GB); the rest share nothing at the hardware level, so scheduling them means accounting for on-card capacity, not carving host memory.
+
+If someone asks why Metis wins on per-watt: moving data costs far more energy than doing the math. Axelera's chip computes inside its own memory, so the weights never travel. That only works while the model fits in the chip's small on-chip memory. Big models need big HBM memory, and then every chip pays the data-movement tax. That is why RNGD and every LLM chip lands at a few TOPS/W: not a flaw in RNGD, it is the physics of large models.
 -->
 
-| | Jetson AGX Orin | DeepX DX-M1 | Axelera Metis |
-|---|---|---|---|
-| Architecture | CUDA GPU, unified memory | Proprietary NPU | RISC-V + in-memory compute |
-| Peak compute (INT8) | 275 TOPS (sparse) | 25 TOPS | ~214 TOPS |
-| Power | 15-60 W configurable | 1-5 W | 3.5-15 W |
-| Perf/watt | 1x baseline | ~20x vs GPGPU (vendor) | ~15 TOPS/W |
-| Memory | 64 GB unified LPDDR5 | 4 GB LPDDR5 on card | 16 MB L1 + 32 MB L2 SRAM, 4-16 GB DDR |
-| SDK | CUDA / JetPack | DEEPX SDK, PyTorch/ONNX | Voyager SDK, PyTorch/ONNX |
-| Host | Self-contained module | PCIe Gen3 x4, x86/ARM | PCIe Gen3 x4, x86/ARM |
+| | Jetson AGX Orin | DeepX DX-M1 | Axelera Metis | Furiosa RNGD |
+|---|---|---|---|---|
+| Architecture | CUDA GPU, unified memory | Proprietary NPU | RISC-V + in-memory compute | TCP NPU, 8 PEs |
+| Peak compute (INT8) | 275 TOPS (sparse) | 25 TOPS | ~214 TOPS | 512 TOPS |
+| Power | 15-60 W configurable | 1-5 W | 3.5-15 W | 180 W |
+| Perf/watt | 1x baseline | ~20x vs GPGPU (vendor) | ~15 TOPS/W | ~2.8 TOPS/W |
+| Memory | 64 GB unified LPDDR5 | 4 GB LPDDR5 on card | 16 MB L1 + 32 MB L2 SRAM, 4-16 GB DDR | 48 GB HBM3 |
+| Partitioning | None | None | Static 25% L2 per core (1-4) | SR-IOV fixed: 6/12/24/48 GB |
+
+*RNGD is datacenter class, not edge: 180 W is low for that class (NVIDIA runs 400-1000 W). Value here: Korean domestic silicon, air-cooled density, and the only hardware partitioning in the table. Its edge sibling Warboy (64 TOPS) has none.*
 
 ---
 
@@ -260,6 +301,7 @@ Three pieces are needed. Capacity reporting: tell the scheduler what each device
 
 ---
 
+@layout image-left
 ## DRA: ResourceSlice
 
 @subtitle Per-node device inventory
@@ -450,15 +492,48 @@ Typed ResourceSlice capacities (memory step 1 MiB, cores 0-100). Requests become
 :::
 :::
 
-@row
+---
 
-```yaml
-resources:
-  limits:
-    nvidia.com/gpu: 1          # one vGPU slice
-    nvidia.com/gpumem: 4000    # 4000 MiB of memory
-    nvidia.com/gpucores: 30    # 30% of the compute units
-```
+## Types of Slicing
+
+@subtitle Four ways to share one device
+
+<!--
+Slicing comes in four flavors. Memory and compute slicing are the core of HAMi: 1 MiB memory, 1% compute. Time slicing is pure software: no vendor ships a time-quantum API, the scheduler rotates compute access over time. So even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. That is reverse engineering: fragile, breaks on SDK updates. Better to ask the vendor for support, the way HAMi does with NVIDIA and Huawei.
+-->
+
+::: grid {cols=2}
+::: card {tag=green}
+### {icon:memory-stick cls=accent-secondary} Memory slicing
+
+- Carve device memory per tenant
+- HAMi: 1 MiB, dynamic per pod
+- Native options are fixed partitions (MIG, vXPU buckets)
+:::
+::: card {tag=cyan}
+### {icon:gauge cls=accent-secondary} Compute slicing
+
+- Percent of compute units per tenant
+- Core quotas: MPS %, dcucores, vcore
+- Hard limit enforced on every call
+:::
+::: card {tag=yellow}
+### {icon:clock cls=accent-contrast} Time slicing
+
+- Rotate compute access over time
+- Pure software: no vendor ships a time-quantum API
+- Preemption optional: without it, long kernels run to completion
+:::
+::: card {tag=red}
+### {icon:layers cls=accent-primary} Hardware partitioning
+
+- MIG, SR-IOV, vXPU, vDCU
+- Static, hardware-enforced
+- Strongest isolation, least flexible
+:::
+:::
+
+**Time slicing is pure software.** Even if a vendor exposes no slicing at all, you can hook its driver SDK and build your own. Reverse engineering is fragile: ask the vendor for support instead.
 
 ---
 
@@ -524,29 +599,6 @@ GPU spread puts each agent on its own device. No tenant shares compute or memory
 
 ---
 
-## Gotchas
-
-@subtitle Hardware limits and Kubernetes gaps
-
-<!--
-Two gotchas when sharing edge devices. MIG is not available on Jetson, and DRA is stable but advanced scheduling is still missing from the platform.
--->
-
-::: grid {cols=2}
-::: card {tag=cyan}
-### {icon:layers cls=accent-primary} MIG is not available everywhere
-
-MIG needs data-center silicon and fixed profiles. Jetson has no MIG at all. Software slicing works on any device.
-:::
-::: card {tag=green}
-### {icon:git-branch cls=accent-primary} K8s GPU APIs are still young
-
-DRA is stable, but advanced scheduling (binpack, spread, topology) is still missing from the platform.
-:::
-:::
-
----
-
 # Part 3: Blueprint
 
 @subtitle Edge AI without a cloud budget
@@ -558,14 +610,14 @@ DRA is stable, but advanced scheduling (binpack, spread, topology) is still miss
 @subtitle Three steps to a multi-agent edge device
 
 <!--
-The path is short. Pick a device: Jetson-class for CUDA compatibility, or an NPU for performance per watt. Slice it: memory in MiB, compute in percent, hard limits per agent. Schedule agents: binpack to pack them tight, spread for SLOs. Everything runs on k3s or k0s, managed with Kubernetes APIs, no ops team needed. Olares is the turnkey path: an open-source, k3s-based personal cloud OS that ships this stack pre-installed, with MCP and GPU scheduling built in, so agents run as standard containers on hardware you own.
+The path is short. Pick a device: Jetson-class for CUDA compatibility (the HAMi slicing path exists for CUDA). NPUs like DeepX and Axelera have no runtime hook, so HAMi cannot slice them yet: they are the frontier, not today's choice. Slice it: memory in MiB, compute in percent, hard limits per agent. Schedule agents: binpack to pack them tight, spread for SLOs. Everything runs on k3s or k0s, managed with Kubernetes APIs, no ops team needed. Olares is the turnkey path: an open-source, k3s-based personal cloud OS that ships this stack pre-installed, with MCP and GPU scheduling built in, so agents run as standard containers on hardware you own.
 -->
 
 ::: grid {cols=3}
 ::: card {tag=green}
 ### {icon:cpu cls=accent-primary} 1. Pick a device
 
-Jetson-class GPU for CUDA compatibility, NPU (DeepX, Axelera) for performance per watt. One control plane for both.
+Jetson-class GPU: CUDA compatibility, the HAMi slicing path. NPUs (DeepX, Axelera) are the frontier: no SDK hook, no slicing today.
 :::
 ::: card {tag=cyan}
 ### {icon:gauge cls=accent-primary} 2. Slice it

@@ -32,7 +32,7 @@ paginate: true
 @subtitle Open-source agents need edge hardware
 
 <!--
-Hermes and OpenClaw can reason and use tools. Running them at the edge is hard: not because of the models, but because of the compute underneath. Limited memory, tight power budgets, no ops team. Democratizing agentic AI means fixing the compute layer.
+Hermes and OpenClaw can reason and use tools. Running them at the edge is hard: not because of the models, but because of the compute underneath. Limited memory, tight power budgets, unattended operation. To run agents at the edge, fix the compute layer first.
 -->
 
 Open-source agents like Hermes and OpenClaw can reason and use tools. Edge deployment is still hard: not the model, the compute underneath.
@@ -49,13 +49,13 @@ A Jetson-class device has 8-64 GB of unified memory, shared with the OS. One age
 No 300 W data-center GPU at the edge. You get 5-40 W, often battery or solar.
 :::
 ::: card {tag=cyan}
-### {icon:user-x cls=accent-primary} No ops team
+### {icon:user-x cls=accent-primary} Unattended
 
-No GPU cluster admin, no Prometheus dashboards. It has to work after setup, unattended.
+No cluster admin on call. Prometheus may scrape, but no one watches the dashboards. It has to work after setup.
 :::
 :::
 
-Democratizing agentic AI means fixing the compute layer.
+To run agents at the edge, fix the compute layer first.
 
 ---
 
@@ -269,7 +269,7 @@ Compute slicing is the goal, the mechanism depends on the vendor. HAMi exposes o
 ### {icon:clock cls=accent-contrast} Time slicing
 
 - Workloads take turns
-- Pure software: no vendor API
+- Pure software
 :::
 ::: card {tag=red}
 ### {icon:layers cls=accent-primary} Hardware partitioning
@@ -336,7 +336,6 @@ ax.set_xticks([])
 
 - One job holds a whole card: 1 GB used of 141 GB
 - Slicing frees the rest: MiB-level partitions per pod
-- Dynamic: repartition per pod, no reboot
 
 ---
 
@@ -481,8 +480,8 @@ for x in [40, 75]:
 for x, lab in [(20, "40%"), (57.5, "35%"), (87.5, "25%")]:
     ax.text(x, 0, lab, ha="center", va="center", fontsize=9, color=fg, fontweight="bold")
 
-ax.text(0, 1.38, "FIXED AT BOOT:  MIG, SR-IOV, vXPU, vDCU", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
-ax.text(0, 0.38, "REPARTITIONED LIVE:  HAMi slices", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+ax.text(0, 1.38, "HARDWARE PARTITIONS:  MIG, SR-IOV, vXPU, vDCU", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
+ax.text(0, 0.38, "SOFTWARE PARTITIONS:  HAMi slices", ha="left", va="bottom", fontsize=10, color=fg, fontweight="bold")
 
 ax.set_xlim(0, 100)
 ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
@@ -490,9 +489,8 @@ ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
 ```
 :::
 
-- MIG, SR-IOV, vXPU, vDCU: fixed at boot, hardware-enforced
+- MIG, SR-IOV, vXPU, vDCU: hardware partitions, silicon-enforced
 - Memory and compute fenced per slot: strongest isolation
-- No live repartition: fixed sizes only
 
 ---
 

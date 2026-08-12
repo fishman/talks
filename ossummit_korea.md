@@ -27,38 +27,6 @@ paginate: true
 
 ---
 
-## Edge Agents, Starved Compute
-
-@subtitle Open-source agents need edge hardware
-
-<!--
-Hermes and OpenClaw can reason and use tools. Running them at the edge is hard: not because of the models, but because of the compute underneath. Limited memory, tight power budgets, unattended operation. To run agents at the edge, fix the compute layer first.
--->
-
-Open-source agents like Hermes and OpenClaw can reason and use tools. Edge deployment is still hard: not the model, the compute underneath.
-
-::: grid {cols=3}
-::: card {tag=red}
-### {icon:memory-stick cls=accent-secondary} Limited memory
-
-A Jetson-class device has 8-64 GB of unified memory, shared with the OS. One agent stack can eat it all.
-:::
-::: card {tag=yellow}
-### {icon:zap cls=accent-contrast} Tight power budgets
-
-No 300 W data-center GPU at the edge. You get 5-40 W, often battery or solar.
-:::
-::: card {tag=cyan}
-### {icon:user-x cls=accent-primary} Unattended
-
-No cluster admin on call. Prometheus may scrape, but no one watches the dashboards. It has to work after setup.
-:::
-:::
-
-To run agents at the edge, fix the compute layer first.
-
----
-
 ## Not All Edge Compute Is Agents
 
 @subtitle Most edge inference today is CV and classic ML
@@ -94,6 +62,43 @@ Most edge inference is CV and classic ML, not LLMs. Agents are the new slice.
 :::
 
 One deployment pattern for all three: same device sharing for small-model inference and agent tasks.
+
+---
+
+## Edge Agents, Starved Compute
+
+@subtitle Open-source agents need edge hardware
+
+<!--
+Hermes and OpenClaw can reason and use tools. Running them at the edge is hard: not because of the models, but because of the compute underneath. Limited memory, tight power budgets, unattended operation, no elastic scaling. To run agents at the edge, fix the compute layer first.
+-->
+
+Open-source agents like Hermes and OpenClaw can reason and use tools. Edge deployment is still hard: not the model, the compute underneath.
+
+::: grid {cols=2}
+::: card {tag=red}
+### {icon:memory-stick cls=accent-secondary} Limited memory
+
+A Jetson-class device has 8-64 GB of unified memory, shared with the OS. One agent stack can eat it all.
+:::
+::: card {tag=yellow}
+### {icon:zap cls=accent-contrast} Tight power budgets
+
+No 300 W data-center GPU at the edge. You get 5-40 W, often battery or solar.
+:::
+::: card {tag=cyan}
+### {icon:user-x cls=accent-primary} Unattended
+
+No cluster admin on call. Prometheus may scrape, but no one watches the dashboards. It has to work after setup.
+:::
+::: card {tag=green}
+### {icon:scale cls=accent-primary} No elastic scaling
+
+Cloud load grows: add GPUs. Edge load grows: nothing to add. The deployed box is all you get.
+:::
+:::
+
+To run agents at the edge, fix the compute layer first.
 
 ---
 
@@ -947,13 +952,13 @@ China Merchants Bank - SNOW Corp. - NIO - KE Holdings - DaoCloud - SF Technology
 @subtitle Devices, integrations, and who uses HAMi
 
 <!--
-4.1k stars, 325k pulls, 500+ contributors, 27 countries. 11 device types, 20+ adopters. This is the ecosystem slide: show the breadth. The QR code links to github.com/Project-HAMi/HAMi.
+5.2k stars, 325k pulls, 500+ contributors, 27 countries. 11 device types, 20+ adopters. This is the ecosystem slide: show the breadth. The QR code links to github.com/Project-HAMi/HAMi.
 -->
 
 #### Open Source, CNCF Backed, Production Ready
 ::: grid {cols=5}
 ::: card {metric}
-4.1k
+5.2k
 Github Stars
 :::
 ::: card {metric}

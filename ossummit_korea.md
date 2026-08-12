@@ -210,38 +210,37 @@ Consistent metrics and visibility across vendors.
 
 @layout two-col
 
-## Carving Unified Memory
+## GPU Sharing
 
-@subtitle Slices of one device, not whole devices
+@subtitle Dynamic fine-grained device slicing
 
 <!--
-Jetson-class devices share one LPDDR pool between CPU and GPU. HAMi carves it: each agent requests MiB of memory and percent of compute, and sees only its slice. When demand exceeds memory, idle slices swap to host RAM: time-sharing. Same YAML as the data center, on hardware as small as a Jetson.
+Same YAML across vendors. Ascend example on the right. Memory is hard limit, cores are best-effort. This is what users actually write.
 -->
 
-- **Unified memory is carveable:** CPU and GPU share one LPDDR pool
-- **Fine-grained:** MiB-level slices, multiple agents per device
-- **Time-sharing:** when demand exceeds memory, idle slices swap to host RAM
-- **Hard limits per agent:** one task cannot eat its neighbors
-- **Same YAML in the data center and at the edge**
+- **NVIDIA, Ascend, Cambricon, Hygon, Iluvatar** supported
+- **Fine-grained:** as small as 1MB device memory, 1% computing cores
+- **Transparent to tasks:** no code changes required
+- **Hard resource isolation** inside containers
+- One API across vendors: same YAML, any accelerator
 
 @col
 
 ```yaml
-# Two agents on one Jetson, 4 GB and 40% compute each
+# Ascend 910C: 8GB + 20% compute
 resources:
   limits:
-    nvidia.com/gpu: 1
-    nvidia.com/gpumem: 4096
-    nvidia.com/gpucores: 40
+    huawei.com/Ascend910C: "1"
+    huawei.com/Ascend910C-core: "20"
+    huawei.com/Ascend910C-memory: "8192"
 ```
 
 ```yaml
-# Third agent, time-shared
+# NVIDIA: 3GB on any GPU
 resources:
   limits:
     nvidia.com/gpu: 1
-    nvidia.com/gpumem: 2048
-    nvidia.com/gpucores: 20
+    nvidia.com/gpumem: 3000
 ```
 
 ---

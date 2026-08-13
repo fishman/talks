@@ -35,13 +35,11 @@ paginate: true
 Most inference running on edge devices today is not language models. YOLO-style detection, classification, OCR, embeddings: small models, millisecond latency, already cheap on NPUs and embedded GPUs. Agents are a new slice and the hardest one to schedule: memory-heavy LLMs running concurrently on the same device.
 -->
 
-Most edge inference is CV and classic ML, not LLMs. Agents are the new slice.
-
 ::: grid {cols=3}
 ::: card {tag=green}
 ### {icon:scan cls=accent-secondary} CV and classic inference
 
-- YOLO, classification, OCR, embeddings
+- YOLO, classification, OCR, embeddings, Deep Learning
 - 1-50M params, millisecond latency
 - Runs on NPUs and embedded GPUs today
 :::
@@ -313,14 +311,14 @@ fig.patch.set_alpha(0)
 ax.text(-4, 1.75, "GPU MEMORY: ALLOCATED VS USED", fontsize=10.5, color=dimmed, family="monospace")
 
 ax.barh(1, 141, color=grey, height=0.5)
-ax.barh(1, 1, color=red, height=0.5)
+ax.barh(1, 2, color=red, height=0.5)
 ax.barh(0, 141, color=grey, height=0.5)
-ax.barh(0, 39, color=yellow, height=0.5)
+ax.barh(0, 39, left=2, color=yellow, height=0.5)
 
 ax.text(-4, 1, "Inference\njob", ha="right", va="center", fontsize=12, color=fg, fontweight="bold", linespacing=1.4)
 ax.text(-4, 0, "Training\njob", ha="right", va="center", fontsize=12, color=fg, fontweight="bold", linespacing=1.4)
 
-ax.text(6, 1, "1 GB used", ha="left", va="center", fontsize=11.5, color=fg)
+ax.text(6, 1, "2 GB used", ha="left", va="center", fontsize=11.5, color=fg)
 ax.text(44, 0, "39 GB used", ha="left", va="center", fontsize=11.5, color=fg)
 
 ax.text(141, 1.42, "one whole H200 = 141 GB", ha="right", va="bottom", fontsize=10.5, color=dimmed)
@@ -338,7 +336,7 @@ ax.set_xticks([])
 ```
 :::
 
-- One job holds a whole card: 1 GB used of 141 GB
+- One job holds a whole card: 2 GB used of 141 GB
 - Slicing frees the rest: MiB-level partitions per pod
 
 ---

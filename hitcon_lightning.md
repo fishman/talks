@@ -20,7 +20,7 @@ paginate: true
 
 # Part 1: The Problem
 
-@subtitle GPUs are expensive, and Kubernetes does not share them well
+@subtitle One small pod can DoS the GPU
 
 ---
 
@@ -59,7 +59,7 @@ Pack small slices onto the fewest cards. Whole cards stay free for big models.
 ---
 # Part 2: The Solution
 
-@subtitle No code changes. No kernel modules. No vendor lock-in.
+@subtitle Hard limits and smart scheduling close the DoS
 
 ---
 
@@ -268,6 +268,12 @@ Consistent metrics and visibility across vendors.
 
 ---
 
+# Part 3: In Production
+
+@subtitle Where the isolation has to hold
+
+---
+
 @layout ecosystem
 ## Community & Adopters
 
@@ -321,6 +327,13 @@ Contributor Countries
 :::
 
 ---
+
+# Part 4: MCP integrated vs. MCP plugin security
+
+@subtitle GLHF
+
+---
+
 
 @kicker Thank You
 @side-image assets/coscup26/qr_code_coscup2026.png

@@ -328,12 +328,68 @@ Contributor Countries
 
 ---
 
-# Part 4: MCP integrated vs. MCP plugin security
+# Part 4: After Thoughts
 
-@subtitle GLHF
+@subtitle MCP plugins vs. an integrated server
 
 ---
 
+## MCP Plugins: Do Not Trust the Tool
+
+@subtitle You do not know if it wipes your mail
+
+<!--
+OpenClaw deleted the Meta AI alignment director's entire mailbox: https://www.businessinsider.com/meta-ai-alignment-director-openclaw-email-deletion-2026-2. An MCP plugin hands an LLM full mail operations with no declared capabilities, so you hand-roll the harness: staging, sandboxing, review. The plugin itself has no boundary.
+-->
+
+::: grid {cols=2}
+::: card {tag=red}
+### {icon:trash-2 cls=accent-secondary} Unknown destructive power
+
+- OpenClaw wiped the Meta AI director's whole mailbox
+- Your MCP tool can do the same: you do not know
+:::
+::: card {tag=yellow}
+### {icon:shield-alert cls=accent-contrast} You build the harness
+
+- LLM tries to break your system
+- You hand-roll guards: staging, sandboxing, review
+:::
+:::
+
+**You can audit a plugin, but a defensive security posture is better.**
+
+::: card
+
+experimental mail client
+
+github.com/fishman/notmutt
+
+:::
+
+---
+
+## Integrated MCP: Boundaries in the Client
+
+@subtitle Whitelist tools, no file writes, staged destruction
+
+<!--
+notmutt integrates an MCP server (go-mcp) with a defensive posture: tools whitelisted via [mcp] allow (unknown names are startup errors), plugin VMs with no os/io/debug (no filesystem), staged destructive commands (stage, then APPLY; the buffer is the undo). Sandbox is part of the design, not an agent guardrail the LLM can ignore.
+-->
+
+- **Whitelist tools:** `[mcp] allow` names each tool; unknown names are startup errors
+- **No filesystem writes:** plugin VMs have no os/io/debug libraries
+- **Staged destructive commands:** stage, then APPLY. The buffer is the undo
+- **Sandbox in the design,** not an agent guardrail
+
+::: card {tag=red}
+### {icon:hard-drive cls=accent-secondary} Same-disk caveat
+
+- Agent on the same disk reads the maildir or mbox directly, no MCP needed
+- Isolation is a property of the deployment, not the tool
+:::
+
+---
 
 @kicker Thank You
 @side-image assets/coscup26/qr_code_coscup2026.png

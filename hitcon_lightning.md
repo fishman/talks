@@ -24,26 +24,39 @@ paginate: true
 
 ---
 
-## What is HAMi
+## A Small Model Can DoS the GPU
 
-@subtitle Before: one GPU, one task
+@subtitle No memory limit, no borders
 
 <!--
-GPUs are expensive and often underutilized. HAMi is a heterogeneous GPU sharing framework for Kubernetes. It slices GPUs and shares them across workloads, without rewriting your stack.
+Two ways a small pod breaks the GPU. One: no memory cap, a greedy pod allocates until the card is full and everyone else OOMs. Two, the subtler DoS: spamming small models fragments memory - a little free here, a little there, but no card has a big contiguous chunk, so large training jobs cannot be scheduled at all. Production traces show partial-GPU sharing can leave hundreds of GPUs unallocated. HAMi fixes both: hard per-pod memory and compute limits enforced at the CUDA API layer, and binpack placement that packs small slices tight and leaves whole cards free for big models.
 -->
 
-![Before HAMi](assets/hami_intro/before-hami.png)
+::: grid {cols=2}
+::: card {tag=red}
+### {icon:triangle-alert cls=accent-secondary} No limits: OOM
+
+Small model, no cap, whole card. The first allocation that fails is never the greedy pod's: training killed, LLM evicted.
+:::
+::: card {tag=yellow}
+### {icon:layers cls=accent-contrast} Fragmentation DoS
+
+Spam small models across the cluster. A little memory here, a little there: every card fragments, big training jobs cannot fit.
+:::
+::: card {tag=green}
+### {icon:shield-check cls=accent-primary} Fix: hard limits
+
+Every allocation checked against the pod's slice. Memory and compute caps, enforced on every call.
+:::
+::: card {tag=cyan}
+### {icon:git-branch cls=accent-contrast} Fix: binpack scheduling
+
+Pack small slices onto the fewest cards. Whole cards stay free for big models.
+:::
+:::
+
 
 ---
-
-## What is HAMi
-@transition none
-
-@subtitle After: one GPU, many tasks
-
-![After HAMi](assets/hami_intro/after-hami.png)
----
-
 # Part 2: The Solution
 
 @subtitle No code changes. No kernel modules. No vendor lock-in.
@@ -87,42 +100,41 @@ resources:
 
 ---
 
-## Why Memory Isolation Matters
 
-@subtitle One bad task must not kill its neighbors
+@layout two-col
+
+## CUDA Hijacking
+
+@subtitle Your app does not change
 
 <!--
-Without isolation, one workload can grab all memory and OOM-kill the other tasks on the same GPU. HAMi enforces memory when it hijacks the CUDA API calls: every task sees only its own slice.
+HAMi ships a small library. The container runtime loads it before your app starts. It intercepts CUDA calls and replies with your slice. No code changes, no kernel modules, no driver changes.
 -->
 
-::: grid {cols=2}
-::: card {tag=red}
-### {icon:triangle-alert cls=accent-secondary} Without HAMi
+Your app calls CUDA. HAMi answers with a slice of the GPU.
 
-Tasks share a GPU with no borders. One greedy task eats all memory and kills the neighbors. Multi-tenant means risky.
-:::
-::: card {tag=green}
-### {icon:shield-check cls=accent-primary} With HAMi
+- Small library loaded before your app (`LD_PRELOAD`)
+- Intercepts CUDA calls, no app code changes
+- No kernel modules, no driver changes
+- Works for any framework: PyTorch, TensorFlow, vLLM
 
-Each task sees only its slice. Memory is a hard limit, enforced by the hijacked CUDA calls: every allocation is checked against your slice.
-:::
-::: card {tag=yellow}
-### {icon:refresh-cw cls=accent-contrast} Oversubscription
+@col
 
-Idle memory can be swapped to host RAM, so more models fit. Great for inference, not for active training.
-:::
-::: card {tag=cyan}
-### {icon:gauge cls=accent-contrast} Per-task limits
+```dot
+digraph G {
+  rankdir=LR
+  bgcolor=transparent
+  node [shape=box style="rounded,filled" fontname="Arial" fontsize=16 margin="0.25,0.18"]
+  edge [fontname="Arial" fontsize=12]
 
-```yaml
-resources:
-  limits:
-    nvidia.com/gpu: 1
-    nvidia.com/gpumem: 3000
+  app [label="Your app" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+  lib [label="HAMi core\n(cuMemAlloc...)" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
+  gpu [label="GPU slice" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+
+  app -> lib [label="CUDA calls"]
+  lib -> gpu [label="slice only"]
+}
 ```
-3 GB slice on any GPU. Same YAML works for Ascend, Cambricon and more.
-:::
-:::
 
 ---
 
@@ -177,60 +189,38 @@ digraph G {
 
 ---
 
-@layout two-col
+## Isolation: Physical Fences vs Software Checks
 
-## The Magic: CUDA Hijacking
-
-@subtitle Your app does not change
+@subtitle What the silicon does, what the library does, what leaks
 
 <!--
-HAMi ships a small library. The container runtime loads it before your app starts. It intercepts CUDA calls and replies with your slice. No code changes, no kernel modules, no driver changes.
+MIG is the strongest widely-deployed GPU isolation: dedicated SMs, L2 partitions, memory slices. But it is not absolute. Research has broken MIG with an L2 cache side channel via memory barriers (USENIX Security 2026), a GPU TLB covert channel (CCS 2023), and uncore channels through NVENC/NVDEC/NVJPEG and DRAM frequency scaling (MICRO 2024), all without root. Software boundaries are weaker in principle: time-slicing has no memory isolation and residual GPU memory is readable by co-tenants. HAMi's boundary is a library that checks every allocation in-process. Weaker than silicon, but it is the only option for sub-MIG slicing and multi-vendor, and it runs exactly where the tenant code runs.
 -->
 
-Your app calls CUDA. HAMi answers with a slice of the GPU.
+::: grid {cols=2}
+::: card {tag=green}
+### {icon:shield cls=accent-primary} Physical limits: MIG
 
-- Small library loaded before your app (`LD_PRELOAD`)
-- Intercepts CUDA calls, no app code changes
-- No kernel modules, no driver changes
-- Works for any framework: PyTorch, TensorFlow, vLLM
+Dedicated SMs, L2 partitions, memory slices. Fenced in silicon: one instance crashing never touches another. The strongest boundary there is.
+:::
+::: card {tag=cyan}
+### {icon:code cls=accent-contrast} Software-enforced: HAMi
 
-@col
+Every CUDA allocation checked against the pod's slice, in-process. No silicon fence: the boundary is a library that intercepts the API.
+:::
+::: card {tag=yellow}
+### {icon:bug cls=accent-secondary} Hardware fences leak
 
-```dot
-digraph G {
-  rankdir=LR
-  bgcolor=transparent
-  node [shape=box style="rounded,filled" fontname="Arial" fontsize=16 margin="0.25,0.18"]
-  edge [fontname="Arial" fontsize=12]
+MIG has been broken by side channels: L2 cache timing across partitions, a GPU TLB covert channel, NVENC/NVDEC/JPEG uncore channels. No root needed.
+:::
+::: card {tag=red}
+### {icon:shield-alert cls=accent-secondary} Software fences leak more
 
-  app [label="Your app" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
-  lib [label="HAMi core\n(cuMemAlloc...)" fillcolor="#fce8e8" color="#7A0504" fontcolor="#3a2020"]
-  gpu [label="GPU slice" fillcolor="#F6ECD9" color="#F1C560" fontcolor="#3a2020"]
+Time-slicing has no memory isolation: residual GPU memory is readable by co-tenants. A software boundary holds only as well as the interception.
+:::
+:::
 
-  app -> lib [label="CUDA calls"]
-  lib -> gpu [label="slice only"]
-}
-```
-
----
-
-## GPU Sharing Approaches
-
-@subtitle MIG vs HAMi vs NVIDIA DRA
-
-<!--
-Common question: why not just use MIG? MIG does not work on all devices and needs manual templates. NVIDIA DRA supports MIG, MPS and VFIO, but has no advanced scheduling. HAMi adds symbolic hijacking for sub-MIG slicing and multi-vendor support.
--->
-
-| Capability | MIG | HAMi | NVIDIA DRA |
-|------------|:---:|:---:|:---:|
-| Sub-MIG slicing | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Dynamic repartition | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:check cls=accent-primary} |
-| Multi-vendor | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| Advanced scheduling | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-| No code changes | {icon:x cls=accent-secondary} | {icon:check cls=accent-primary} | {icon:x cls=accent-secondary} |
-
-HAMi differentiates with symbolic hijacking (1 MiB granularity on NVIDIA), consumable capacities for flexible requests, and multi-vendor support. HAMi-DRA builds on NVIDIA's upstream DRA driver and supports multiple DRA drivers.
+**Isolation is a spectrum: pick the boundary that matches your threat model.**
 
 ---
 
@@ -275,25 +265,6 @@ Consistent metrics and visibility across vendors.
 :::
 :::
 ---
-
-@layout image-right
-
-## Scheduling Policies
-
-@subtitle Topology-Aware
-
-<!--
-NVLink vs PCIe is a 7-14x bandwidth gap. HAMi schedules multi-GPU workloads to NVLink-connected pairs, avoids PCIe bridge pairs. Ascend uses HCCS, other vendors have their own high-speed interconnects: same topology logic applies. This matters for tensor parallelism and large-model training.
--->
-
-![NUMA topology-aware scheduling](assets/hami_intro/topology_numa.png)
-
-- **NVLink 3 (A100):** 600 GB/s, 12 links
-- **NVLink 4 (H100/H200):** 900 GB/s bidirectional across 18 links
-- **NVLink 5 (B200/B300):** 1.8 TB/s, 14x PCIe 5.0
-- **NVLink 6 (Rubin):** ~3.6 TB/s target
-- **PCIe 5.0 x16:** 128 GB/s. **PCIe 6.0:** 242 GB/s
-- **HAMi topology policy:** prefers NVLink (NVIDIA), HCCS (Ascend), and other high-speed interconnects, avoids PCIe bridge pairs
 
 ---
 

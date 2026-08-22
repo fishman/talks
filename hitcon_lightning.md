@@ -24,23 +24,6 @@ paginate: true
 
 ---
 
-@layout image-right
-
-## The Problem
-
-@subtitle One GPU per task is the default
-
-Kubernetes allocates GPUs atomically: one whole device, one task.
-
-- A 1 GB task blocks an 80 GB device
-- Most GPUs sit idle most of the time
-- DRA (Dynamic Resource Allocation) is stable, but still work in progress
-- No advanced scheduling yet: no binpack, no spread, no topology
-
-![Device Plugin vs DRA](assets/hami/device-plugin-vs-dra.png)
-
----
-
 ## What is HAMi
 
 @subtitle Before: one GPU, one task
@@ -101,6 +84,45 @@ resources:
     nvidia.com/gpu: 1
     nvidia.com/gpumem: 3000
 ```
+
+---
+
+## Why Memory Isolation Matters
+
+@subtitle One bad task must not kill its neighbors
+
+<!--
+Without isolation, one workload can grab all memory and OOM-kill the other tasks on the same GPU. HAMi enforces memory when it hijacks the CUDA API calls: every task sees only its own slice.
+-->
+
+::: grid {cols=2}
+::: card {tag=red}
+### {icon:triangle-alert cls=accent-secondary} Without HAMi
+
+Tasks share a GPU with no borders. One greedy task eats all memory and kills the neighbors. Multi-tenant means risky.
+:::
+::: card {tag=green}
+### {icon:shield-check cls=accent-primary} With HAMi
+
+Each task sees only its slice. Memory is a hard limit, enforced by the hijacked CUDA calls: every allocation is checked against your slice.
+:::
+::: card {tag=yellow}
+### {icon:refresh-cw cls=accent-contrast} Oversubscription
+
+Idle memory can be swapped to host RAM, so more models fit. Great for inference, not for active training.
+:::
+::: card {tag=cyan}
+### {icon:gauge cls=accent-contrast} Per-task limits
+
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1
+    nvidia.com/gpumem: 3000
+```
+3 GB slice on any GPU. Same YAML works for Ascend, Cambricon and more.
+:::
+:::
 
 ---
 
@@ -189,45 +211,6 @@ digraph G {
   lib -> gpu [label="slice only"]
 }
 ```
-
----
-
-## Why Memory Isolation Matters
-
-@subtitle One bad task must not kill its neighbors
-
-<!--
-Without isolation, one workload can grab all memory and OOM-kill the other tasks on the same GPU. HAMi enforces memory when it hijacks the CUDA API calls: every task sees only its own slice.
--->
-
-::: grid {cols=2}
-::: card {tag=red}
-### {icon:triangle-alert cls=accent-secondary} Without HAMi
-
-Tasks share a GPU with no borders. One greedy task eats all memory and kills the neighbors. Multi-tenant means risky.
-:::
-::: card {tag=green}
-### {icon:shield-check cls=accent-primary} With HAMi
-
-Each task sees only its slice. Memory is a hard limit, enforced by the hijacked CUDA calls: every allocation is checked against your slice.
-:::
-::: card {tag=yellow}
-### {icon:refresh-cw cls=accent-contrast} Oversubscription
-
-Idle memory can be swapped to host RAM, so more models fit. Great for inference, not for active training.
-:::
-::: card {tag=cyan}
-### {icon:gauge cls=accent-contrast} Per-task limits
-
-```yaml
-resources:
-  limits:
-    nvidia.com/gpu: 1
-    nvidia.com/gpumem: 3000
-```
-3 GB slice on any GPU. Same YAML works for Ascend, Cambricon and more.
-:::
-:::
 
 ---
 

@@ -368,6 +368,8 @@ github.com/fishman/notmutt
 
 ---
 
+@layout image-right
+
 ## Integrated MCP: Boundaries in the Client
 
 @subtitle Whitelist tools, no file writes, staged destruction
@@ -387,6 +389,8 @@ notmutt integrates an MCP server (go-mcp) with a defensive posture: tools whitel
 - Agent on the same disk reads the maildir or mbox directly, no MCP needed
 - Isolation is a property of the deployment, not the tool
 :::
+
+![notmutt](assets/notmutt.png)
 
 ---
 

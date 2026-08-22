@@ -270,7 +270,7 @@ Consistent metrics and visibility across vendors.
 
 # Part 3: In Production
 
-@subtitle Where the isolation has to hold
+@subtitle Ecosystem
 
 ---
 

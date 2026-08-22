@@ -9,7 +9,7 @@ paginate: true
 
 @variant dark
 @kicker HITCON 2026
-@side-image assets/coscup26/qr_code_coscup2026.png
+@side-image assets/qr-hami-repo.png
 # DoS AI Workloads & Defensive MCP
 
 @subtitle Architecture and Gotchas
@@ -360,8 +360,7 @@ OpenClaw deleted the Meta AI alignment director's entire mailbox: https://www.bu
 **You can audit a plugin, but a defensive security posture is better.**
 
 ::: card
-
-experimental mail client
+### {icon:shield-alert cls=accent-contrast} Experimental mail client with integrated MCP
 
 github.com/fishman/notmutt
 
@@ -392,9 +391,9 @@ notmutt integrates an MCP server (go-mcp) with a defensive posture: tools whitel
 ---
 
 @kicker Thank You
-@side-image assets/coscup26/qr_code_coscup2026.png
-# Questions? Try HAMi
+@side-image assets/qr-notmutt.png
+# Questions? Find me
 
-@subtitle github.com/Project-HAMi/HAMi
+@subtitle github.com/fishman
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI" github=github.com/fishman linkedin=linkedin.com/in/rezajelveh

@@ -32,7 +32,7 @@ Lab guide: https://workshop.project-hami.io/labs/containerdays-singapore/#lab-3-
 Lab commands and outputs on these slides are from a run on 2026-10-20 (kind 0.33, kubectl 1.37, helm 4.3, HAMi chart 2.10.0, hami-mock-monitor 86adb51); Labs 2 and 3 re-verified 2026-10-23.
 -->
 @variant dark
-@side-image assets/qr-hami-repo.png
+@side-image assets/containerdays-singapore-qrcode.png
 @kicker ContainerDays 2026 Singapore · CNCF Incubating project
 
 # From Zero to Shared&nbsp;GPUs

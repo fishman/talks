@@ -136,7 +136,7 @@ Six capabilities. The key ones for this workshop: hard isolation, advanced sched
 ::: card
 ### {icon:layers cls=accent-primary} Heterogeneous Management
 
-Manage GPU, NPU, MLU, and other accelerators in one workflow.
+Manage GPU, NPU, MLU, TPU and other accelerators in one workflow.
 :::
 ::: card
 ### {icon:shield-check cls=accent-primary} Hard Isolation
@@ -612,9 +612,9 @@ Since v2.10.0 policies chain: filters first (`mutex`, `topology-aware`), then so
 ```pdg
 graph layout=row theme=hami gap=56
 group src "On the node" layout=column gap=14 {
-  nv "NVIDIA · NVML" sub="NVLink and PCIe P2P links"
-  amd "AMD · KFD topology" sub="XGMI peers, NUMA node"
-  mx "MetaX · vendor plugin" sub="MetaXLink and PCIe switch"
+  nv "NVIDIA - NVML" sub="NVLink and PCIe P2P links"
+  amd "AMD - KFD topology" sub="XGMI peers, NUMA node"
+  mx "MetaX - vendor plugin" sub="MetaXLink and PCIe switch"
   kl "Kunlunxin, AWS Neuron" sub="fixed board layout by index"
 }
 dp "Device plugin" sub="per vendor, DaemonSet" .green
@@ -1069,8 +1069,8 @@ group alloc "Allocation · scheduler :9395" sub="what was reserved" layout=colum
   apod "Per pod" sub="hami_vgpu_memory_allocated_bytes\nhami_gpu_shared_count"
 }
 group usage "Usage · monitor :9394" sub="what is consumed" layout=column gap=18 .green {
-  ucnt "Per container" sub="hami_vgpu_memory_used_bytes\nhami_container_device_utilization_ratio"
   ucard "Per card" sub="hami_host_gpu_memory_used_bytes\nhami_host_gpu_utilization_ratio"
+  ucnt "Per container" sub="hami_vgpu_memory_used_bytes\nhami_container_device_utilization_ratio"
 }
 alloc -> usage "alloc ≥ used"
 ```
@@ -1311,4 +1311,4 @@ Contributor Countries
 @subtitle github.com/Project-HAMi/HAMi · project-hami.io · lab: github.com/Project-HAMi/hami-workshop
 
 @speaker name="Reza Jelveh" role="Global Market & Solution Architecture, Dynamia AI" github=github.com/fishman linkedin=linkedin.com/in/rezajelveh
-@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer"
+@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer" github=github.com/archlitchi linkedin=linkedin.com/in/rezajelveh

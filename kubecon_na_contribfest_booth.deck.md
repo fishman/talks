@@ -67,8 +67,8 @@ group alloc "Allocation · scheduler :9395" sub="what was reserved" layout=colum
   apod "Per pod" sub="hami_vgpu_memory_allocated_bytes\nhami_gpu_shared_count"
 }
 group usage "Usage · monitor :9394" sub="what is consumed" layout=column gap=18 .green {
-  ucnt "Per container" sub="hami_vgpu_memory_used_bytes\nhami_container_device_utilization_ratio"
   ucard "Per card" sub="hami_host_gpu_memory_used_bytes\nhami_host_gpu_utilization_ratio"
+  ucnt "Per container" sub="hami_vgpu_memory_used_bytes\nhami_container_device_utilization_ratio"
 }
 alloc -> usage "alloc ≥ used"
 ```

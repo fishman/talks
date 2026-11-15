@@ -125,7 +125,6 @@ Live demo (hamidemo run pitch, A100s, 2026-11-10): the 10 GB server got 2g.10gb,
 ---
 
 ## Without HAMi
-@transition none
 
 ```pdg
 graph dir=LR route=bend diagonal=none rank-gap=200 theme=hami
@@ -193,6 +192,7 @@ users -> before "Without HAMi" exit=right enter=left label-at=start
 ---
 
 ## With HAMi
+@transition none
 
 ```pdg
 graph dir=LR route=bend diagonal=none rank-gap=200 theme=hami

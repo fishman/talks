@@ -124,9 +124,161 @@ Live demo (hamidemo run pitch, A100s, 2026-11-10): the 10 GB server got 2g.10gb,
 
 ---
 
-## Sharing a node with HAMi
+## Without HAMi
 
-![After HAMi](assets/hami_intro/after-hami.png)
+```pdg
+graph dir=LR route=bend diagonal=none rank-gap=200
+
+css {
+  graph  { padding: 20px; color: #111827; font-size: 17px; }
+  node   { border-radius: 0; stroke-width: 1.5; min-width: 0; min-height: 0; padding: 0; font-size: 17px; color: #111827; }
+  group  { fill: none; stroke: none; padding: 0; font-weight: normal; font-size: 17px; color: #111827; label-position: bottom; text-align: center; }
+  .torch { fill: #ffe6cc; stroke: #d79b00; }
+  .qwen  { fill: #dae8fc; stroke: #6c8ebf; }
+  .free  { fill: #d5e8d4; stroke: #82b366; }
+  .empty { fill: #ffffff; stroke: #c4c4c4; }
+  .waste { fill: #ffffff; stroke: #c4c4c4; hatch: #374151; hatch-gap: 12px; }
+  .id    { fill: #ffffff; stroke: #c4c4c4; }
+  .title { color: #7ea6e0; font-size: 24px; font-weight: bold; }
+  edge.plain { stroke: #111827; stroke-width: 3; sketch: 1; roughness: 2; head: open; font-size: 22px; }
+  .ghost { fill: none; stroke: none; }
+}
+
+def gpu name="GPU" top=empty top_label="" top_h=80 mid=empty mid_label="" mid_h=80 {
+  t "$top_label" .$top height=$top_h width=100
+  m "$mid_label" .$mid height=$mid_h width=100
+  n "$name" .id height=36 width=100
+}
+
+def want cls=empty used=50 rest=110 {
+  f "" .empty height=$rest width=76
+  w "" .$cls height=$used width=76
+}
+
+group page layout=row gap=200 align=center {
+group users layout=row gap=40 align=end {
+  group u_torch "Request 2 GPUs\n10G/GPU" layout=column gap=10 {
+    torch "Pytorch User" .torch icon=user shape=image img-width=80
+    group torch_bars layout=row gap=12 {
+      use want tw1 cls=torch used=50 rest=110 layout=column gap=0
+      use want tw2 cls=torch used=50 rest=110 layout=column gap=0
+    }
+  }
+  group u_chat "Request 2 GPUs\n20G/GPU" layout=column gap=10 {
+    chat "Support Chat" .qwen icon=user shape=image img-width=80
+    group chat_bars layout=row gap=12 {
+      use want cw1 cls=qwen used=100 rest=60 layout=column gap=0
+      use want cw2 cls=qwen used=100 rest=60 layout=column gap=0
+    }
+  }
+}
+group node layout=column gap=40 {
+  group before layout=row gap=0 align=end {
+    group b_used "Whole GPU occupied" layout=row gap=0 {
+      use gpu b0 name="GPU 0" top=waste top_h=110 mid=torch mid_label="Pytorch" mid_h=50 layout=column gap=0
+      use gpu b1 name="GPU 1" top=waste top_h=110 mid=torch mid_label="Pytorch" mid_h=50 layout=column gap=0
+    }
+    group b_waste "Wasted" layout=row gap=0 {
+      use gpu b2 name="GPU 2" top=waste top_h=60 mid=qwen mid_label="Qwen" mid_h=100 layout=column gap=0
+      use gpu b3 name="GPU 3" top=waste top_h=60 mid=qwen mid_label="Qwen" mid_h=100 layout=column gap=0
+    }
+  }
+  title "Node 4x V100 (32G)" .title shape=none
+  spacer "" .ghost height=222 width=400
+}
+}
+
+users -> before "Without HAMi" .plain exit=right enter=left label-at=start
+```
+
+---
+
+## With HAMi
+
+```pdg
+graph dir=LR route=bend diagonal=none rank-gap=200
+
+css {
+  graph  { padding: 20px; color: #111827; font-size: 17px; }
+  node   { border-radius: 0; stroke-width: 1.5; min-width: 0; min-height: 0; padding: 0; font-size: 17px; color: #111827; }
+  group  { fill: none; stroke: none; padding: 0; font-weight: normal; font-size: 17px; color: #111827; label-position: bottom; text-align: center; }
+  .torch { fill: #ffe6cc; stroke: #d79b00; }
+  .qwen  { fill: #dae8fc; stroke: #6c8ebf; }
+  .free  { fill: #d5e8d4; stroke: #82b366; }
+  .empty { fill: #ffffff; stroke: #c4c4c4; }
+  .waste { fill: #ffffff; stroke: #c4c4c4; hatch: #374151; hatch-gap: 12px; }
+  .id    { fill: #ffffff; stroke: #c4c4c4; }
+  .title { color: #7ea6e0; font-size: 24px; font-weight: bold; }
+  edge.hami { stroke: #82b366; stroke-width: 3; sketch: 1; roughness: 2; head: open; font-size: 22px; }
+}
+
+def gpu name="GPU" top=empty top_label="" top_h=80 mid=empty mid_label="" mid_h=80 {
+  t "$top_label" .$top height=$top_h width=100
+  m "$mid_label" .$mid height=$mid_h width=100
+  n "$name" .id height=36 width=100
+}
+
+def shared name="GPU" slack=10 {
+  s "" .empty height=$slack width=100
+  q "Qwen" .qwen height=100 width=100
+  p "Pytorch" .torch height=50 width=100
+  n "$name" .id height=36 width=100
+}
+
+def idle name="GPU" {
+  t "Available" .free height=160 width=100
+  n "$name" .id height=36 width=100
+}
+
+def want cls=empty used=50 rest=110 {
+  f "" .empty height=$rest width=76
+  w "" .$cls height=$used width=76
+}
+
+group page layout=row gap=200 align=center {
+group users layout=row gap=40 align=end {
+  group u_torch "Request 2 GPUs\n10G/GPU" layout=column gap=10 {
+    torch "Pytorch User" .torch icon=user shape=image img-width=80
+    group torch_bars layout=row gap=12 {
+      use want tw1 cls=torch used=50 rest=110 layout=column gap=0
+      use want tw2 cls=torch used=50 rest=110 layout=column gap=0
+    }
+  }
+  group u_chat "Request 2 GPUs\n20G/GPU" layout=column gap=10 {
+    chat "Support Chat" .qwen icon=user shape=image img-width=80
+    group chat_bars layout=row gap=12 {
+      use want cw1 cls=qwen used=100 rest=60 layout=column gap=0
+      use want cw2 cls=qwen used=100 rest=60 layout=column gap=0
+    }
+  }
+}
+group node layout=column gap=40 {
+  group before layout=row gap=0 align=end {
+    group b_used "Whole GPU occupied" layout=row gap=0 {
+      use gpu b0 name="GPU 0" top=waste top_h=110 mid=torch mid_label="Pytorch" mid_h=50 layout=column gap=0
+      use gpu b1 name="GPU 1" top=waste top_h=110 mid=torch mid_label="Pytorch" mid_h=50 layout=column gap=0
+    }
+    group b_waste "Wasted" layout=row gap=0 {
+      use gpu b2 name="GPU 2" top=waste top_h=60 mid=qwen mid_label="Qwen" mid_h=100 layout=column gap=0
+      use gpu b3 name="GPU 3" top=waste top_h=60 mid=qwen mid_label="Qwen" mid_h=100 layout=column gap=0
+    }
+  }
+  title "Node 4x V100 (32G)" .title shape=none
+  group after layout=row gap=0 align=end {
+    group a_shared "Shared with Isolation" layout=row gap=0 {
+      use shared a0 name="GPU 0" layout=column gap=0
+      use shared a1 name="GPU 1" layout=column gap=0
+    }
+    group a_free "Available" layout=row gap=0 {
+      use idle a2 name="GPU 2" layout=column gap=0
+      use idle a3 name="GPU 3" layout=column gap=0
+    }
+  }
+}
+}
+
+users -> after "With HAMi" .hami exit=right enter=left label-at=start image=assets/brand/hami-logo.png img-width=56
+```
 
 ---
 

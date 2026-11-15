@@ -32,7 +32,7 @@ Lab commands and outputs on these slides are from a run on 2026-10-20 (kind 0.33
 # GPU Virtualization: First Setup and Understanding the Device Plugin / DRA
 
 @speaker name="Reza Jelveh" role="Solution Architect, Dynamia AI  -  Makers of HAMi" github=github.com/fishman linkedin=linkedin.com/in/rezajelveh
-@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer"
+@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer" github=github.com/archlitchi linkedin=linkedin.com/in/mengxuan-li-5862a9314
 
 ---
 
@@ -1311,4 +1311,4 @@ Contributor Countries
 @subtitle github.com/Project-HAMi/HAMi · project-hami.io · lab: github.com/Project-HAMi/hami-workshop
 
 @speaker name="Reza Jelveh" role="Global Market & Solution Architecture, Dynamia AI" github=github.com/fishman linkedin=linkedin.com/in/rezajelveh
-@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer" github=github.com/archlitchi linkedin=linkedin.com/in/rezajelveh
+@speaker name="Mengxuan Li" role="CTO, Dynamia AI  -  HAMi maintainer" github=github.com/archlitchi linkedin=linkedin.com/in/mengxuan-li-5862a9314

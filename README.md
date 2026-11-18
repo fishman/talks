@@ -25,3 +25,14 @@ make watch-<deck>       # watch and rebuild
 ## Assets
 
 Images per deck live in `assets/<deck>/`. Symlinked into `dist/` on build.
+
+## License
+
+Slides, text, diagrams and code in this repository are licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (see `LICENSE`).
+You can copy, adapt and reuse any of it, commercially too, as long as you credit:
+
+> Reza Jelveh (github.com/fishman), Solution Architect, Dynamia AI - Makers of HAMi
+
+Not covered: third-party logos and trademarks (CNCF, KubeCon, Linux Foundation, event
+and company logos, adopter logos) and event backgrounds. Those belong to their owners.
